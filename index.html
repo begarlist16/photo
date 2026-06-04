@@ -17,71 +17,51 @@
     <span class="loader-text">Memuat Galeri…</span>
   </div>
 
-  <!-- HEADER -->
+  <!-- SINGLE NAVBAR: home icon · dark mode · categories -->
   <header class="header">
     <div class="header-inner">
 
-      <!-- Logo (click = showHome) -->
-      <a href="#" class="logo" onclick="showHome(); return false;">
-        <span class="logo-mark">✦</span>
-        <span class="logo-text">Begarlist 16</span>
-      </a>
-
-      <!-- Home button with animated emoji -->
-      <a href="https://begarlist16.github.io" class="home-btn" title="Kembali ke Homepage" target="_self">
+      <!-- Home icon only -->
+      <a href="https://begarlist16.github.io" class="home-btn" title="Kembali ke Homepage">
         <span class="home-emoji">🏠</span>
-        <span class="home-label">Home</span>
       </a>
 
-      <!-- Search -->
-      <div class="search-wrap">
-        <input
-          type="text"
-          id="searchInput"
-          class="search-input"
-          placeholder="Cari foto…"
-          oninput="handleSearch(this.value)"
-        />
-        <span class="search-icon">⌕</span>
-      </div>
+      <!-- Dark mode toggle -->
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+        <span id="themeIcon">☀</span>
+      </button>
 
-      <!-- Theme toggle -->
-      <div class="header-actions">
-        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
-          <span id="themeIcon">☀</span>
+      <!-- Divider -->
+      <span class="nav-divider"></span>
+
+      <!-- Inline categories -->
+      <div class="category-inner">
+
+        <button class="cat-btn active" data-cat="all" onclick="filterCategory('all', this)">Semua</button>
+
+        <!-- Group: 10 IPS 3 -->
+        <button class="cat-btn group-trigger" data-group="ips3" onclick="toggleGroup('ips3', this)">
+          10 IPS 3 <span class="group-arrow" id="arrow-ips3">▸</span>
         </button>
+        <div class="group-chips" id="group-ips3">
+          <button class="cat-btn chip" data-cat="Moments" onclick="filterCategory('Moments', this, 'ips3')">Moments</button>
+          <button class="cat-btn chip" data-cat="Bali"    onclick="filterCategory('Bali',    this, 'ips3')">Bali</button>
+          <button class="cat-btn chip" data-cat="Jogja"   onclick="filterCategory('Jogja',   this, 'ips3')">Jogja</button>
+        </div>
+
+        <!-- Group: Buku Tahunan -->
+        <button class="cat-btn group-trigger" data-group="bukutahunan" onclick="toggleGroup('bukutahunan', this)">
+          Buku Tahunan <span class="group-arrow" id="arrow-bukutahunan">▸</span>
+        </button>
+        <div class="group-chips" id="group-bukutahunan">
+          <button class="cat-btn chip" data-cat="Pose"         onclick="filterCategory('Pose',         this, 'bukutahunan')">Pose</button>
+          <button class="cat-btn chip" data-cat="BTS"          onclick="filterCategory('BTS',          this, 'bukutahunan')">BTS</button>
+          <button class="cat-btn chip" data-cat="Staff & Guru" onclick="filterCategory('Staff & Guru', this, 'bukutahunan')">Staff &amp; Guru</button>
+        </div>
+
       </div>
     </div>
   </header>
-
-  <!-- CATEGORIES NAV -->
-  <nav class="category-nav">
-    <div class="category-inner">
-
-      <button class="cat-btn active" data-cat="all" onclick="filterCategory('all', this)">Semua</button>
-
-      <!-- Group: 10 IPS 3 -->
-      <button class="cat-btn group-trigger" data-group="ips3" onclick="toggleGroup('ips3', this)">
-        10 IPS 3 <span class="group-arrow" id="arrow-ips3">▸</span>
-      </button>
-      <div class="group-chips" id="group-ips3">
-        <button class="cat-btn chip" data-cat="Moments" onclick="filterCategory('Moments', this, 'ips3')">Moments</button>
-        <button class="cat-btn chip" data-cat="Bali"    onclick="filterCategory('Bali',    this, 'ips3')">Bali</button>
-        <button class="cat-btn chip" data-cat="Jogja"   onclick="filterCategory('Jogja',   this, 'ips3')">Jogja</button>
-      </div>
-
-      <!-- Group: Buku Tahunan -->
-      <button class="cat-btn group-trigger" data-group="bukutahunan" onclick="toggleGroup('bukutahunan', this)">
-        Buku Tahunan <span class="group-arrow" id="arrow-bukutahunan">▸</span>
-      </button>
-      <div class="group-chips" id="group-bukutahunan">
-        <button class="cat-btn chip" data-cat="Pose"         onclick="filterCategory('Pose',         this, 'bukutahunan')">Pose</button>
-        <button class="cat-btn chip" data-cat="BTS"          onclick="filterCategory('BTS',          this, 'bukutahunan')">BTS</button>
-        <button class="cat-btn chip" data-cat="Staff & Guru" onclick="filterCategory('Staff & Guru', this, 'bukutahunan')">Staff &amp; Guru</button>
-      </div>
-
-    </div>
-  </nav>
 
   <!-- MAIN CONTENT -->
   <main class="main" id="mainContent">
@@ -89,12 +69,6 @@
     <div class="section-header" id="sectionHeader">
       <h2 class="section-title" id="sectionTitle">Semua Foto</h2>
       <span class="section-count" id="sectionCount"></span>
-    </div>
-
-    <!-- Search results notice -->
-    <div class="search-notice" id="searchNotice" style="display:none">
-      <span>Hasil pencarian: </span><strong id="searchTerm"></strong>
-      <button class="clear-search" onclick="clearSearch()">✕ Hapus</button>
     </div>
 
     <!-- Photo Grid -->
@@ -115,13 +89,18 @@
     <button class="lb-nav lb-prev" id="lbPrev" onclick="lightboxNav(-1)" aria-label="Sebelumnya">‹</button>
     <button class="lb-nav lb-next" id="lbNext" onclick="lightboxNav(1)"  aria-label="Berikutnya">›</button>
 
-    <div class="lb-content">
-      <!-- Image loader spinner inside lightbox -->
-      <div class="lb-img-loader" id="lbImgLoader"></div>
-      <img id="lbImg" src="" alt="" />
-    </div>
+    <div class="lb-body">
+      <div class="lb-content">
+        <div class="lb-img-loader" id="lbImgLoader"></div>
+        <img id="lbImg" src="" alt="" />
+      </div>
+      <div class="lb-caption" id="lbCaption"></div>
 
-    <div class="lb-caption" id="lbCaption"></div>
+      <!-- Thumbnail strip -->
+      <div class="lb-strip-wrap">
+        <div class="lb-strip" id="lbStrip"></div>
+      </div>
+    </div>
   </div>
 
   <!-- FOOTER -->

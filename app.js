@@ -86,35 +86,8 @@ function filterCategory(cat, btn, groupId) {
     closeAllGroups();
   }
 
-  document.getElementById('searchInput').value = '';
-  document.getElementById('searchNotice').style.display = 'none';
-
-  const filtered = filterPhotos();
   document.getElementById('sectionTitle').textContent = cat === 'all' ? 'Semua Foto' : cat;
 
-  renderPhotos(filtered);
-  updateCount(filtered.length);
-}
-
-// ── SEARCH ────────────────────────────────────────────────────
-function handleSearch(val) {
-  currentSearch = val.trim().toLowerCase();
-  const notice = document.getElementById('searchNotice');
-  if (currentSearch) {
-    notice.style.display = 'flex';
-    document.getElementById('searchTerm').textContent = val.trim();
-  } else {
-    notice.style.display = 'none';
-  }
-  const filtered = filterPhotos();
-  renderPhotos(filtered);
-  updateCount(filtered.length);
-}
-
-function clearSearch() {
-  currentSearch = '';
-  document.getElementById('searchInput').value = '';
-  document.getElementById('searchNotice').style.display = 'none';
   const filtered = filterPhotos();
   renderPhotos(filtered);
   updateCount(filtered.length);
@@ -217,7 +190,48 @@ function openLightbox(index) {
   const overlay = document.getElementById('lightboxOverlay');
   overlay.classList.add('open');
   document.body.style.overflow = 'hidden';
+  buildStrip();
   loadLightboxPhoto(index);
+}
+
+// Build the thumbnail strip once per open (reflects current lightboxPhotos set)
+function buildStrip() {
+  const strip = document.getElementById('lbStrip');
+  strip.innerHTML = '';
+
+  lightboxPhotos.forEach((p, i) => {
+    const thumb = document.createElement('div');
+    thumb.className = 'lb-thumb';
+    thumb.dataset.index = i;
+
+    const img = document.createElement('img');
+    img.src = thumbSrc(p.src);
+    img.alt = p.title;
+    img.loading = 'lazy';
+
+    thumb.appendChild(img);
+    thumb.addEventListener('click', (e) => {
+      e.stopPropagation();
+      lightboxIndex = i;
+      loadLightboxPhoto(i);
+    });
+    strip.appendChild(thumb);
+  });
+}
+
+// Scroll the active thumbnail into view and update active state
+function syncStrip(index) {
+  const strip = document.getElementById('lbStrip');
+  const thumbs = strip.querySelectorAll('.lb-thumb');
+  thumbs.forEach((t, i) => t.classList.toggle('active', i === index));
+
+  const active = thumbs[index];
+  if (active) {
+    // Centre the active thumb in the scroll container
+    const stripWrap = strip.parentElement;
+    const offset = active.offsetLeft - stripWrap.offsetWidth / 2 + active.offsetWidth / 2;
+    strip.scrollTo({ left: offset, behavior: 'smooth' });
+  }
 }
 
 function loadLightboxPhoto(index) {
@@ -248,7 +262,10 @@ function loadLightboxPhoto(index) {
   };
   tempImg.src = full;
 
-  // Update nav visibility
+  // Sync strip active state
+  syncStrip(index);
+
+  // Update nav arrow visibility
   document.getElementById('lbPrev').style.opacity = index > 0 ? '1' : '0.2';
   document.getElementById('lbNext').style.opacity = index < lightboxPhotos.length - 1 ? '1' : '0.2';
 }
@@ -310,8 +327,6 @@ function escHtml(str) {
 function showHome() {
   currentCategory = 'all';
   currentSearch   = '';
-  document.getElementById('searchInput').value = '';
-  document.getElementById('searchNotice').style.display = 'none';
   document.getElementById('sectionTitle').textContent = 'Semua Foto';
   document.querySelectorAll('.cat-btn').forEach(b =>
     b.classList.toggle('active', b.dataset.cat === 'all')
