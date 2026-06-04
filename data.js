@@ -9814,5 +9814,5 @@ const PHOTOS = [
     category: "Bali",
     src: "https://lh3.googleusercontent.com/pw/AP1GczP_BO0EiF6dQ7IEQlhQPanVBFAeByLn04kJSXAFbrf3ZGHj5sdNzi77t_XAji0CUkRbKE7jNp34wY01iNBkJAj8wob6N8HOgRi3yeosdQJ9tuJ5OVE",
     description: "10 IPS 3 Moments Kelas, Tumpeng, TNI, Rindam"
-  },
+  }
 ];
