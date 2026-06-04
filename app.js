@@ -186,15 +186,15 @@ function renderPhotos(photos) {
   photos.forEach((p, i) => {
     const card = document.createElement('div');
     card.className = 'photo-card card-hidden';
-    // Stagger: first 12 get a progressive delay, after that they all animate quickly
     card._staggerDelay = Math.min(i, 11) * 60;
-    card.setAttribute('data-id', p.id);
+
+    const thumb = thumbSrc(p.src);
 
     card.innerHTML = `
       <div class="photo-wrap">
         <div class="photo-skeleton"></div>
         <img
-          data-src="${escHtml(p.src)}"
+          data-src="${escHtml(thumb)}"
           src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
           alt="${escHtml(p.title)}"
           loading="lazy"
@@ -226,25 +226,27 @@ function loadLightboxPhoto(index) {
   const caption = document.getElementById('lbCaption');
   const loader  = document.getElementById('lbImgLoader');
 
-  // Show loader, hide image
+  // Show loader, hide image while full-res loads
   img.style.opacity = '0';
   loader.style.display = 'block';
   caption.textContent  = '';
 
+  const full = fullSrc(photo.src);
+
   const tempImg = new Image();
   tempImg.onload = () => {
-    img.src = photo.src;
+    img.src = full;
     img.alt = photo.title;
     loader.style.display = 'none';
     img.style.opacity = '1';
     caption.textContent = `${photo.title}  ·  ${photo.category}`;
   };
   tempImg.onerror = () => {
-    img.src = photo.src;
+    img.src = full;
     loader.style.display = 'none';
     img.style.opacity = '1';
   };
-  tempImg.src = photo.src;
+  tempImg.src = full;
 
   // Update nav visibility
   document.getElementById('lbPrev').style.opacity = index > 0 ? '1' : '0.2';
@@ -279,7 +281,20 @@ document.addEventListener('keydown', e => {
   if (e.key === 'ArrowRight')  lightboxNav(1);
 });
 
-// ── HELPERS ───────────────────────────────────────────────────
+// ── SRC HELPERS — Google Photos size suffix ───────────────────
+// Appends Google Photos size param only when the URL contains
+// googleusercontent.com; leaves other URLs (Unsplash, etc.) untouched.
+function thumbSrc(src) {
+  if (src.includes('googleusercontent.com')) return src + '=w500-h500';
+  return src + '?w=500&q=75'; // Unsplash fallback
+}
+
+function fullSrc(src) {
+  if (src.includes('googleusercontent.com')) return src + '=w9999-h9999';
+  return src + '?w=1600&q=95'; // Unsplash fallback
+}
+
+
 function updateCount(n) {
   document.getElementById('sectionCount').textContent = `${n} foto`;
 }
