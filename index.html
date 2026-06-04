@@ -61,6 +61,19 @@
 
       </div>
     </div>
+
+    <!-- Mobile-only scrollable category strip (flat, no expand/collapse) -->
+    <div class="category-row" id="mobileCategoryRow">
+      <div class="category-inner" id="mobileCategoryInner">
+        <button class="cat-btn active" data-cat="all" onclick="filterCategory('all', this, null, true)">Semua</button>
+        <button class="cat-btn chip" data-cat="Moments" onclick="filterCategory('Moments', this, 'ips3', true)">Moments</button>
+        <button class="cat-btn chip" data-cat="Bali"    onclick="filterCategory('Bali',    this, 'ips3', true)">Bali</button>
+        <button class="cat-btn chip" data-cat="Jogja"   onclick="filterCategory('Jogja',   this, 'ips3', true)">Jogja</button>
+        <button class="cat-btn chip" data-cat="Pose"         onclick="filterCategory('Pose',         this, 'bukutahunan', true)">Pose</button>
+        <button class="cat-btn chip" data-cat="BTS"          onclick="filterCategory('BTS',          this, 'bukutahunan', true)">BTS</button>
+        <button class="cat-btn chip" data-cat="Staff & Guru" onclick="filterCategory('Staff & Guru', this, 'bukutahunan', true)">Staff &amp; Guru</button>
+      </div>
+    </div>
   </header>
 
   <!-- MAIN CONTENT -->

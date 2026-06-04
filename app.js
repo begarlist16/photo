@@ -86,6 +86,10 @@ function filterCategory(cat, btn, groupId) {
     closeAllGroups();
   }
 
+  // Sync active state across both desktop and mobile strips
+  const sel = cat === 'all' ? '.cat-btn[data-cat="all"]' : `.cat-btn[data-cat="${CSS.escape(cat)}"]`;
+  document.querySelectorAll(sel).forEach(b => b.classList.add('active'));
+
   document.getElementById('sectionTitle').textContent = cat === 'all' ? 'Semua Foto' : cat;
 
   const filtered = filterPhotos();
