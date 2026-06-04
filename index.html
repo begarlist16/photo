@@ -57,31 +57,29 @@
   <!-- CATEGORIES NAV -->
   <nav class="category-nav">
     <div class="category-inner">
+
       <button class="cat-btn active" data-cat="all" onclick="filterCategory('all', this)">Semua</button>
 
-      <!-- Dropdown: 10 IPS 3 -->
-      <div class="cat-dropdown">
-        <button class="cat-btn dropdown-trigger" data-group="ips3" onclick="toggleDropdown('ips3', event)">
-          10 IPS 3 <span class="dropdown-arrow">▾</span>
-        </button>
-        <div class="dropdown-menu" id="dropdown-ips3">
-          <button class="dropdown-item" data-cat="Moments" onclick="filterCategory('Moments', this, 'ips3')">Moments</button>
-          <button class="dropdown-item" data-cat="Bali"    onclick="filterCategory('Bali',    this, 'ips3')">Bali</button>
-          <button class="dropdown-item" data-cat="Jogja"   onclick="filterCategory('Jogja',   this, 'ips3')">Jogja</button>
-        </div>
+      <!-- Group: 10 IPS 3 -->
+      <button class="cat-btn group-trigger" data-group="ips3" onclick="toggleGroup('ips3', this)">
+        10 IPS 3 <span class="group-arrow" id="arrow-ips3">▸</span>
+      </button>
+      <div class="group-chips" id="group-ips3">
+        <button class="cat-btn chip" data-cat="Moments" onclick="filterCategory('Moments', this, 'ips3')">Moments</button>
+        <button class="cat-btn chip" data-cat="Bali"    onclick="filterCategory('Bali',    this, 'ips3')">Bali</button>
+        <button class="cat-btn chip" data-cat="Jogja"   onclick="filterCategory('Jogja',   this, 'ips3')">Jogja</button>
       </div>
 
-      <!-- Dropdown: Buku Tahunan -->
-      <div class="cat-dropdown">
-        <button class="cat-btn dropdown-trigger" data-group="bukutahunan" onclick="toggleDropdown('bukutahunan', event)">
-          Buku Tahunan <span class="dropdown-arrow">▾</span>
-        </button>
-        <div class="dropdown-menu" id="dropdown-bukutahunan">
-          <button class="dropdown-item" data-cat="Pose"        onclick="filterCategory('Pose',        this, 'bukutahunan')">Pose</button>
-          <button class="dropdown-item" data-cat="BTS"         onclick="filterCategory('BTS',         this, 'bukutahunan')">BTS</button>
-          <button class="dropdown-item" data-cat="Staff & Guru" onclick="filterCategory('Staff & Guru', this, 'bukutahunan')">Staff &amp; Guru</button>
-        </div>
+      <!-- Group: Buku Tahunan -->
+      <button class="cat-btn group-trigger" data-group="bukutahunan" onclick="toggleGroup('bukutahunan', this)">
+        Buku Tahunan <span class="group-arrow" id="arrow-bukutahunan">▸</span>
+      </button>
+      <div class="group-chips" id="group-bukutahunan">
+        <button class="cat-btn chip" data-cat="Pose"         onclick="filterCategory('Pose',         this, 'bukutahunan')">Pose</button>
+        <button class="cat-btn chip" data-cat="BTS"          onclick="filterCategory('BTS',          this, 'bukutahunan')">BTS</button>
+        <button class="cat-btn chip" data-cat="Staff & Guru" onclick="filterCategory('Staff & Guru', this, 'bukutahunan')">Staff &amp; Guru</button>
       </div>
+
     </div>
   </nav>
 

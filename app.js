@@ -20,8 +20,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // Fallback: hide after 2s even if some resource is slow
   setTimeout(hideLoader, 2000);
 
-  // Close dropdown on outside click
-  document.addEventListener('click', () => closeAllDropdowns());
+  // Close groups on outside click
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.group-trigger') && !e.target.closest('.group-chips')) {
+      closeAllGroups();
+    }
+  });
 });
 
 function hideLoader() {
@@ -45,17 +49,23 @@ function setTheme(theme) {
   document.getElementById('themeIcon').textContent = theme === 'dark' ? '☀' : '◑';
 }
 
-// ── DROPDOWN ──────────────────────────────────────────────────
-function toggleDropdown(groupId, e) {
-  e.stopPropagation();
-  const menu = document.getElementById('dropdown-' + groupId);
-  const isOpen = menu.classList.contains('open');
-  closeAllDropdowns();
-  if (!isOpen) menu.classList.add('open');
+// ── GROUP EXPAND (inline chips) ───────────────────────────────
+function toggleGroup(groupId, triggerBtn) {
+  const chips = document.getElementById('group-' + groupId);
+  const isOpen = chips.classList.contains('open');
+
+  // Close all groups first
+  closeAllGroups();
+
+  if (!isOpen) {
+    chips.classList.add('open');
+    triggerBtn.classList.add('open');
+  }
 }
 
-function closeAllDropdowns() {
-  document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('open'));
+function closeAllGroups() {
+  document.querySelectorAll('.group-chips').forEach(c => c.classList.remove('open'));
+  document.querySelectorAll('.group-trigger').forEach(b => b.classList.remove('open'));
 }
 
 // ── CATEGORY FILTER ───────────────────────────────────────────
@@ -63,25 +73,24 @@ function filterCategory(cat, btn, groupId) {
   currentCategory = cat;
   currentSearch   = '';
 
-  // Remove active from all cat-btns
+  // Remove active from all cat-btns and chips
   document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.dropdown-item').forEach(b => b.classList.remove('active'));
 
   if (groupId) {
-    // Mark the parent trigger as active-group
-    document.querySelector(`[data-group="${groupId}"]`).classList.add('active');
+    // Keep group open, mark the trigger as open+active-group, mark the chip active
+    const trigger = document.querySelector(`[data-group="${groupId}"]`);
+    if (trigger) { trigger.classList.add('open', 'active'); }
     btn.classList.add('active');
-    closeAllDropdowns();
   } else {
     btn.classList.add('active');
+    closeAllGroups();
   }
 
   document.getElementById('searchInput').value = '';
   document.getElementById('searchNotice').style.display = 'none';
 
   const filtered = filterPhotos();
-  const title = cat === 'all' ? 'Semua Foto' : cat;
-  document.getElementById('sectionTitle').textContent = title;
+  document.getElementById('sectionTitle').textContent = cat === 'all' ? 'Semua Foto' : cat;
 
   renderPhotos(filtered);
   updateCount(filtered.length);
@@ -292,7 +301,7 @@ function showHome() {
   document.querySelectorAll('.cat-btn').forEach(b =>
     b.classList.toggle('active', b.dataset.cat === 'all')
   );
-  document.querySelectorAll('.dropdown-item').forEach(b => b.classList.remove('active'));
+  closeAllGroups();
   renderPhotos(PHOTOS);
   updateCount(PHOTOS.length);
 }
