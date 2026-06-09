@@ -7,9 +7,8 @@ let currentSearch   = '';
 let lightboxIndex   = 0;
 let lightboxPhotos  = [];
 
-// Hero (Google-style homepage) state
-let heroPhotos   = [];   // shuffled subset used for hero
-let heroIndex    = 0;
+// Carousel grid (homepage) state
+let heroPhotos   = [];   // 6 random photos shown on homepage
 
 // ── INIT ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -17,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setTheme(saved);
 
   initCategoryNav();
-  initHero();
+  initCarouselGrid();
 
   window.addEventListener('load', hideLoader);
   setTimeout(hideLoader, 2000);
@@ -174,69 +173,65 @@ function showGrid() {
   document.body.classList.remove('homepage-mode');
 }
 
-// ── HERO (GOOGLE-STYLE) ───────────────────────────────────────
-function initHero() {
-  heroPhotos = [...PHOTOS].sort(() => Math.random() - 0.5).slice(0, 20);
-  heroIndex  = 0;
-  loadHeroPhoto(heroIndex);
+// ── CAROUSEL GRID (6 RANDOM IMAGES HOMEPAGE) ────────────────
+function initCarouselGrid() {
+  heroPhotos = [...PHOTOS].sort(() => Math.random() - 0.5).slice(0, 6);
+  renderCarouselGrid();
   document.body.classList.add('homepage-mode');
-
-  // Click hero to open lightbox
-  const wrap = document.getElementById('heroImageWrap');
-  if (wrap) {
-    wrap.addEventListener('click', () => {
-      lightboxPhotos = heroPhotos;
-      openLightbox(heroIndex);
-    });
-  }
 }
 
-function loadHeroPhoto(index) {
-  const photo = heroPhotos[index];
-  if (!photo) return;
+function renderCarouselGrid() {
+  const grid = document.getElementById('carouselGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
 
-  const img      = document.getElementById('heroImg');
-  const skeleton = document.getElementById('heroSkeleton');
-  const counter  = document.getElementById('heroCounter');
-  const wrap     = document.getElementById('heroImageWrap');
+  heroPhotos.forEach((photo, i) => {
+    const item = document.createElement('div');
+    item.className = 'carousel-grid-item';
 
-  // Show skeleton, hide image
-  img.style.opacity = '0';
-  skeleton.style.display = '';
-  wrap.classList.remove('loaded');
+    const skeleton = document.createElement('div');
+    skeleton.className = 'carousel-grid-skeleton';
 
-  if (counter) counter.textContent = `${index + 1} / ${heroPhotos.length}`;
-
-  const src = fullSrc(photo.src);
-  const tempImg = new Image();
-
-  tempImg.onload = () => {
-    img.src = src;
+    const img = document.createElement('img');
     img.alt = photo.title;
-    img.style.opacity = '1';
-    skeleton.style.display = 'none';
-    wrap.classList.add('loaded');
-  };
+    img.style.opacity = '0';
 
-  tempImg.onerror = () => {
-    img.src = src;
-    img.style.opacity = '1';
-    skeleton.style.display = 'none';
-    wrap.classList.add('loaded');
-  };
+    const overlay = document.createElement('div');
+    overlay.className = 'grid-overlay';
+    overlay.innerHTML = '<span class="grid-zoom-icon">⊕</span>';
 
-  tempImg.src = src;
-}
+    item.appendChild(skeleton);
+    item.appendChild(img);
+    item.appendChild(overlay);
 
-function heroNav(dir) {
-  heroIndex = (heroIndex + dir + heroPhotos.length) % heroPhotos.length;
-  loadHeroPhoto(heroIndex);
+    // Click to open lightbox
+    item.addEventListener('click', () => {
+      lightboxPhotos = heroPhotos;
+      openLightbox(i);
+    });
+
+    // Lazy load image
+    const src = thumbSrc(photo.src);
+    const tempImg = new Image();
+    tempImg.onload = () => {
+      img.src = src;
+      img.style.opacity = '1';
+      item.classList.add('loaded');
+    };
+    tempImg.onerror = () => {
+      img.src = src;
+      img.style.opacity = '1';
+      item.classList.add('loaded');
+    };
+    tempImg.src = src;
+
+    grid.appendChild(item);
+  });
 }
 
 function heroShuffle() {
-  heroPhotos = [...PHOTOS].sort(() => Math.random() - 0.5).slice(0, 20);
-  heroIndex  = 0;
-  loadHeroPhoto(0);
+  heroPhotos = [...PHOTOS].sort(() => Math.random() - 0.5).slice(0, 6);
+  renderCarouselGrid();
 }
 
 // ── INTERSECTION OBSERVER (lazy load + zoom-fade-in) ──────────

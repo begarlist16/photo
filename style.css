@@ -312,7 +312,7 @@ body.homepage-mode .main {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 24px 0;
+  padding: 0 24px 60px;
   min-height: 0;
 }
 
@@ -326,27 +326,35 @@ body.homepage-mode .carousel-section {
   gap: 0;
 }
 
-/* ── RANDOM IMAGE HERO (Google-style) ── */
-.hero-image-wrap {
-  position: relative;
+/* ── 6-IMAGE CAROUSEL GRID (Homepage) ── */
+.carousel-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 10px;
   width: 100%;
-  max-width: 560px;
-  margin: 0 auto 28px;
-  cursor: pointer;
-  border-radius: 20px;
+  max-width: 720px;
+  margin: 0 auto 24px;
+  aspect-ratio: 3/2;
+}
+
+.carousel-grid-item {
+  position: relative;
+  border-radius: 14px;
   overflow: hidden;
-  box-shadow: 0 8px 40px rgba(0,0,0,0.35);
-  transition: transform 0.3s cubic-bezier(0.22,1,0.36,1), box-shadow 0.3s ease;
-  aspect-ratio: 4/3;
+  cursor: pointer;
   background: var(--bg3);
+  transition: transform 0.3s cubic-bezier(0.22,1,0.36,1), box-shadow 0.3s ease;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
 }
 
-.hero-image-wrap:hover {
-  transform: scale(1.015);
-  box-shadow: 0 16px 60px rgba(0,0,0,0.5);
+.carousel-grid-item:hover {
+  transform: scale(1.03);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.45);
+  z-index: 2;
 }
 
-.hero-image-wrap img {
+.carousel-grid-item img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -354,7 +362,7 @@ body.homepage-mode .carousel-section {
   transition: opacity 0.4s ease;
 }
 
-.hero-image-wrap .hero-overlay {
+.carousel-grid-item .grid-overlay {
   position: absolute;
   inset: 0;
   background: rgba(0,0,0,0);
@@ -364,35 +372,35 @@ body.homepage-mode .carousel-section {
   transition: background 0.25s ease;
 }
 
-.hero-image-wrap:hover .hero-overlay {
-  background: rgba(0,0,0,0.25);
+.carousel-grid-item:hover .grid-overlay {
+  background: rgba(0,0,0,0.3);
 }
 
-.hero-zoom-icon {
-  font-size: 48px;
+.grid-zoom-icon {
+  font-size: 28px;
   color: #fff;
   opacity: 0;
   transform: scale(0.7);
   transition: opacity 0.25s ease, transform 0.25s ease;
-  text-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  text-shadow: 0 2px 8px rgba(0,0,0,0.5);
 }
 
-.hero-image-wrap:hover .hero-zoom-icon {
+.carousel-grid-item:hover .grid-zoom-icon {
   opacity: 1;
   transform: scale(1);
 }
 
-.hero-skeleton {
+.carousel-grid-skeleton {
   position: absolute;
   inset: 0;
   background: linear-gradient(90deg, var(--bg3) 25%, var(--border) 50%, var(--bg3) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.4s infinite;
-  border-radius: 20px;
+  border-radius: 14px;
   z-index: 1;
 }
 
-.hero-image-wrap.loaded .hero-skeleton { display: none; }
+.carousel-grid-item.loaded .carousel-grid-skeleton { display: none; }
 
 /* ── HERO CONTROLS ── */
 .hero-controls {
@@ -816,12 +824,9 @@ body.homepage-mode .carousel-section {
 .lb-next { right: 12px; }
 .lb-nav:hover { background: rgba(255,255,255,0.22); }
 
-/* ── FOOTER (always fixed at bottom) ── */
+/* ── FOOTER ── */
+/* Homepage: fixed to bottom of viewport */
 .footer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
   background: var(--bg);
   border-top: 1px solid var(--border);
   text-align: center;
@@ -829,6 +834,10 @@ body.homepage-mode .carousel-section {
   font-size: 13px;
   color: var(--text3);
   z-index: 50;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
 }
 
 /* ── SCROLLBAR ── */
@@ -850,11 +859,11 @@ body.homepage-mode .carousel-section {
   .lightbox-overlay { padding: 48px 8px 16px; }
   .cat-btn { padding: 6px 12px; font-size: 12px; }
 
-  body.homepage-mode .main { padding: 0 16px; }
-  .hero-image-wrap { border-radius: 14px; }
+  body.homepage-mode .main { padding: 0 12px; }
+  .carousel-grid { gap: 6px; max-width: 100%; }
+  .carousel-grid-item { border-radius: 10px; }
   .carousel-hint { font-size: 13px; }
   .hero-controls { gap: 10px; }
-  .hero-nav-btn { width: 36px; height: 36px; font-size: 18px; }
   .footer { padding: 10px 16px; font-size: 12px; }
 }
 
@@ -862,8 +871,8 @@ body.homepage-mode .carousel-section {
   .hero-image-wrap { max-width: 100%; }
 }
 
-/* ── NON-HOMEPAGE: footer is static so grid content is not covered ── */
+/* ── NON-HOMEPAGE: footer follows the photo grid layout ── */
 body:not(.homepage-mode) .footer {
   position: static;
-  margin-top: 32px;
+  margin-top: 48px;
 }
