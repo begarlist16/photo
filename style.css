@@ -94,11 +94,7 @@ body {
   gap: 8px;
 }
 
-/* Row 2: category strip */
-.category-row {
-  border-top: 1px solid var(--border);
-  background: var(--bg);
-}
+/* Row 2: category strip — container managed by .category-row flex */
 
 .category-inner {
   display: flex;
@@ -107,8 +103,14 @@ body {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  padding: 8px 16px;
+  padding: 8px 4px;
+  flex: 1;
+  min-width: 0;
+  cursor: grab;
+  user-select: none;
 }
+
+.category-inner.dragging { cursor: grabbing; }
 
 .category-inner::-webkit-scrollbar { display: none; }
 
@@ -223,6 +225,50 @@ body {
 
 .theme-toggle:hover { background: var(--surface); border-color: var(--accent); }
 
+/* ── CATEGORY NAV ARROWS ── */
+.category-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.cat-nav-btn {
+  flex-shrink: 0;
+  width: 32px;
+  height: 100%;
+  min-height: 44px;
+  background: var(--bg);
+  border: none;
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  color: var(--text2);
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--trans), background var(--trans);
+  z-index: 2;
+  line-height: 1;
+  padding: 0;
+  user-select: none;
+}
+
+.cat-nav-btn:hover {
+  color: var(--accent);
+  background: var(--bg3);
+}
+
+.cat-nav-btn:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+.cat-nav-left  { border-left: none; }
+.cat-nav-right { border-right: none; }
+
 /* ── CATEGORY BUTTONS ── */
 .cat-btn {
   flex-shrink: 0;
@@ -282,7 +328,25 @@ body {
   border-radius: 12px;
   overflow: hidden;
   margin-top: 10px;
+  cursor: pointer;
+  position: relative;
 }
+
+.carousel-item::after {
+  content: '⊕';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  color: #fff;
+  background: rgba(0,0,0,0.35);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.carousel-item:hover::after { opacity: 1; }
 
 .carousel-item img {
   width: 100%;

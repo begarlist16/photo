@@ -2,20 +2,22 @@
 //  Begarlist 16 — Photo Gallery App Logic
 // ============================================================
 
-let currentCategory = null;  // null = no category selected (show carousel)
+let currentCategory = null;
 let currentSearch   = '';
 let lightboxIndex   = 0;
 let lightboxPhotos  = [];
 
-let carouselInterval = null;
-let carouselPos      = 0;
-let carouselPaused   = false;
+let carouselInterval  = null;
+let carouselPos       = 0;
+let carouselPaused    = false;
+let carouselPhotos    = [];   // the 12 random photos used in carousel
 
 // ── INIT ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   const saved = localStorage.getItem('bg16-theme') || 'dark';
   setTheme(saved);
 
+  initCategoryNav();
   initCarousel();
 
   window.addEventListener('load', hideLoader);
@@ -43,6 +45,71 @@ function setTheme(theme) {
   document.getElementById('themeIcon').textContent = theme === 'dark' ? '☀' : '◑';
 }
 
+// ── CATEGORY NAV (arrows + drag + wheel) ─────────────────────
+function initCategoryNav() {
+  const inner = document.getElementById('categoryInner');
+  if (!inner) return;
+
+  // ── Arrow buttons ──
+  updateCatNavBtns();
+  inner.addEventListener('scroll', updateCatNavBtns);
+
+  // ── Mouse drag ──
+  let isDragging = false;
+  let dragStartX = 0;
+  let dragScrollLeft = 0;
+
+  inner.addEventListener('mousedown', (e) => {
+    isDragging  = true;
+    dragStartX  = e.pageX - inner.offsetLeft;
+    dragScrollLeft = inner.scrollLeft;
+    inner.classList.add('dragging');
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    const x    = e.pageX - inner.offsetLeft;
+    const walk = (x - dragStartX) * 1.2;
+    inner.scrollLeft = dragScrollLeft - walk;
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!isDragging) return;
+    isDragging = false;
+    inner.classList.remove('dragging');
+  });
+
+  // ── Wheel → horizontal scroll ──
+  inner.addEventListener('wheel', (e) => {
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+      e.preventDefault();
+      inner.scrollLeft += e.deltaY * 1.5;
+      updateCatNavBtns();
+    }
+  }, { passive: false });
+}
+
+function scrollCatNav(dir) {
+  const inner = document.getElementById('categoryInner');
+  if (!inner) return;
+  inner.scrollBy({ left: dir * 200, behavior: 'smooth' });
+  setTimeout(updateCatNavBtns, 320);
+}
+
+function updateCatNavBtns() {
+  const inner = document.getElementById('categoryInner');
+  const btnL  = document.getElementById('catNavLeft');
+  const btnR  = document.getElementById('catNavRight');
+  if (!inner || !btnL || !btnR) return;
+
+  const atStart = inner.scrollLeft <= 2;
+  const atEnd   = inner.scrollLeft >= inner.scrollWidth - inner.clientWidth - 2;
+
+  btnL.disabled = atStart;
+  btnR.disabled = atEnd;
+}
+
 // ── SEARCH ────────────────────────────────────────────────────
 function handleSearch(val) {
   currentSearch = val.trim().toLowerCase();
@@ -50,7 +117,6 @@ function handleSearch(val) {
   clearBtn.style.display = currentSearch ? 'flex' : 'none';
 
   if (currentSearch) {
-    // Search across all categories
     showGrid();
     const filtered = PHOTOS.filter(p =>
       p.title.toLowerCase().includes(currentSearch) ||
@@ -61,7 +127,6 @@ function handleSearch(val) {
     renderPhotos(filtered);
     updateCount(filtered.length);
   } else {
-    // Restore current category or carousel
     if (currentCategory) {
       applyCategory(currentCategory);
     } else {
@@ -84,9 +149,7 @@ function filterCategory(cat, btn) {
   document.getElementById('searchInput').value = '';
   document.getElementById('searchClear').style.display = 'none';
 
-  // Update active state on buttons
   document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
-  // Mark all buttons with this cat (there may be duplicates)
   document.querySelectorAll(`.cat-btn[data-cat="${CSS.escape(cat)}"]`).forEach(b => b.classList.add('active'));
 
   applyCategory(cat);
@@ -117,23 +180,30 @@ function showGrid() {
 
 // ── CAROUSEL ──────────────────────────────────────────────────
 function initCarousel() {
-  // Pick 12 random photos
-  const shuffled = [...PHOTOS].sort(() => Math.random() - 0.5).slice(0, 12);
+  carouselPhotos = [...PHOTOS].sort(() => Math.random() - 0.5).slice(0, 12);
+
   const track = document.getElementById('carouselTrack');
   track.innerHTML = '';
 
-  // Duplicate for seamless loop
-  const items = [...shuffled, ...shuffled];
-  items.forEach(p => {
+  // Duplicate for seamless loop; store real index on each element
+  const doubled = [...carouselPhotos, ...carouselPhotos];
+  doubled.forEach((p, i) => {
+    const realIdx = i % carouselPhotos.length;
     const el = document.createElement('div');
     el.className = 'carousel-item';
+    el.dataset.realIdx = realIdx;
     el.innerHTML = `<img src="${escHtml(thumbSrc(p.src))}" alt="${escHtml(p.title)}" loading="lazy" />`;
+
+    el.addEventListener('click', () => {
+      lightboxPhotos = carouselPhotos;
+      openLightbox(realIdx);
+    });
+
     track.appendChild(el);
   });
 
   startCarousel();
 
-  // Pause on hover
   track.addEventListener('mouseenter', () => { carouselPaused = true; });
   track.addEventListener('mouseleave', () => { carouselPaused = false; });
 }
@@ -147,9 +217,9 @@ function startCarousel() {
 
   carouselInterval = setInterval(() => {
     if (carouselPaused) return;
-    const itemW = 220; // card width + gap
-    const totalItems = track.children.length / 2; // half is duplicate
-    const maxShift = itemW * totalItems;
+    const itemW     = 212; // 200px card + 12px gap
+    const halfItems = track.children.length / 2;
+    const maxShift  = itemW * halfItems;
 
     carouselPos += 0.5;
     if (carouselPos >= maxShift) carouselPos = 0;
@@ -163,18 +233,6 @@ function stopCarousel() {
     clearInterval(carouselInterval);
     carouselInterval = null;
   }
-}
-
-// ── FILTER LOGIC ──────────────────────────────────────────────
-function filterPhotos() {
-  return PHOTOS.filter(p => {
-    const matchCat    = !currentCategory || p.category === currentCategory;
-    const matchSearch = !currentSearch ||
-      p.title.toLowerCase().includes(currentSearch) ||
-      p.category.toLowerCase().includes(currentSearch) ||
-      p.description.toLowerCase().includes(currentSearch);
-    return matchCat && matchSearch;
-  });
 }
 
 // ── INTERSECTION OBSERVER (lazy load + zoom-fade-in) ──────────
@@ -325,7 +383,6 @@ function loadLightboxPhoto(index) {
   tempImg.src = full;
 
   syncStrip(index);
-
   document.getElementById('lbPrev').style.opacity = index > 0 ? '1' : '0.2';
   document.getElementById('lbNext').style.opacity = index < lightboxPhotos.length - 1 ? '1' : '0.2';
 }
@@ -341,9 +398,7 @@ function closeLightbox() {
   const overlay = document.getElementById('lightboxOverlay');
   overlay.classList.remove('open');
   document.body.style.overflow = '';
-  setTimeout(() => {
-    document.getElementById('lbImg').src = '';
-  }, 300);
+  setTimeout(() => { document.getElementById('lbImg').src = ''; }, 300);
 }
 
 function closeLightboxOnBg(e) {
@@ -353,9 +408,9 @@ function closeLightboxOnBg(e) {
 document.addEventListener('keydown', e => {
   const overlay = document.getElementById('lightboxOverlay');
   if (!overlay.classList.contains('open')) return;
-  if (e.key === 'Escape')      closeLightbox();
-  if (e.key === 'ArrowLeft')   lightboxNav(-1);
-  if (e.key === 'ArrowRight')  lightboxNav(1);
+  if (e.key === 'Escape')     closeLightbox();
+  if (e.key === 'ArrowLeft')  lightboxNav(-1);
+  if (e.key === 'ArrowRight') lightboxNav(1);
 });
 
 // ── SRC HELPERS ───────────────────────────────────────────────
@@ -380,3 +435,4 @@ function escHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 }
+
