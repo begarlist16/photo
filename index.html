@@ -72,14 +72,24 @@
   <!-- MAIN CONTENT -->
   <main class="main" id="mainContent">
 
-    <!-- Carousel: shown when no category is selected -->
+    <!-- Homepage: Google-style hero image -->
     <div class="carousel-section" id="carouselSection">
-      <div class="carousel-wrap" id="carouselWrap">
-        <div class="carousel-track" id="carouselTrack"></div>
-        <div class="carousel-feather carousel-feather-left"></div>
-        <div class="carousel-feather carousel-feather-right"></div>
+      <!-- Hero image -->
+      <div class="hero-image-wrap" id="heroImageWrap">
+        <div class="hero-skeleton" id="heroSkeleton"></div>
+        <img id="heroImg" src="" alt="" style="opacity:0" />
+        <div class="hero-overlay">
+          <span class="hero-zoom-icon">⊕</span>
+        </div>
       </div>
-      <p class="carousel-hint">Pilih Kategori Untuk Melihat Daftar Foto</p>
+      <!-- Controls -->
+      <div class="hero-controls">
+        <button class="hero-nav-btn" id="heroPrev" onclick="heroNav(-1)" aria-label="Sebelumnya">&#8249;</button>
+        <span class="hero-counter" id="heroCounter"></span>
+        <button class="hero-refresh-btn" onclick="heroShuffle()" aria-label="Acak foto">&#8635; Acak</button>
+        <button class="hero-nav-btn" id="heroNext" onclick="heroNav(1)" aria-label="Berikutnya">&#8250;</button>
+      </div>
+      <p class="carousel-hint">Pilih <span>Kategori</span> untuk melihat semua foto</p>
     </div>
 
     <div class="section-header" id="sectionHeader" style="display:none">

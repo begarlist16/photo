@@ -7,10 +7,9 @@ let currentSearch   = '';
 let lightboxIndex   = 0;
 let lightboxPhotos  = [];
 
-let carouselInterval  = null;
-let carouselPos       = 0;
-let carouselPaused    = false;
-let carouselPhotos    = [];   // the 12 random photos used in carousel
+// Hero (Google-style homepage) state
+let heroPhotos   = [];   // shuffled subset used for hero
+let heroIndex    = 0;
 
 // ── INIT ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -18,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setTheme(saved);
 
   initCategoryNav();
-  initCarousel();
+  initHero();
 
   window.addEventListener('load', hideLoader);
   setTimeout(hideLoader, 2000);
@@ -50,11 +49,9 @@ function initCategoryNav() {
   const inner = document.getElementById('categoryInner');
   if (!inner) return;
 
-  // ── Arrow buttons ──
   updateCatNavBtns();
   inner.addEventListener('scroll', updateCatNavBtns);
 
-  // ── Mouse drag ──
   let isDragging = false;
   let dragStartX = 0;
   let dragScrollLeft = 0;
@@ -80,7 +77,6 @@ function initCategoryNav() {
     inner.classList.remove('dragging');
   });
 
-  // ── Wheel → horizontal scroll ──
   inner.addEventListener('wheel', (e) => {
     if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
       e.preventDefault();
@@ -130,7 +126,7 @@ function handleSearch(val) {
     if (currentCategory) {
       applyCategory(currentCategory);
     } else {
-      showCarousel();
+      showHero();
     }
   }
 }
@@ -164,75 +160,83 @@ function applyCategory(cat) {
 }
 
 // ── VIEW SWITCHING ────────────────────────────────────────────
-function showCarousel() {
+function showHero() {
   document.getElementById('carouselSection').style.display = '';
   document.getElementById('sectionHeader').style.display = 'none';
   document.getElementById('photoGrid').innerHTML = '';
   document.getElementById('emptyState').style.display = 'none';
-  startCarousel();
+  document.body.classList.add('homepage-mode');
 }
 
 function showGrid() {
   document.getElementById('carouselSection').style.display = 'none';
   document.getElementById('sectionHeader').style.display = 'flex';
-  stopCarousel();
+  document.body.classList.remove('homepage-mode');
 }
 
-// ── CAROUSEL ──────────────────────────────────────────────────
-function initCarousel() {
-  carouselPhotos = [...PHOTOS].sort(() => Math.random() - 0.5).slice(0, 12);
+// ── HERO (GOOGLE-STYLE) ───────────────────────────────────────
+function initHero() {
+  heroPhotos = [...PHOTOS].sort(() => Math.random() - 0.5).slice(0, 20);
+  heroIndex  = 0;
+  loadHeroPhoto(heroIndex);
+  document.body.classList.add('homepage-mode');
 
-  const track = document.getElementById('carouselTrack');
-  track.innerHTML = '';
-
-  // Duplicate for seamless loop; store real index on each element
-  const doubled = [...carouselPhotos, ...carouselPhotos];
-  doubled.forEach((p, i) => {
-    const realIdx = i % carouselPhotos.length;
-    const el = document.createElement('div');
-    el.className = 'carousel-item';
-    el.dataset.realIdx = realIdx;
-    el.innerHTML = `<img src="${escHtml(thumbSrc(p.src))}" alt="${escHtml(p.title)}" loading="lazy" />`;
-
-    el.addEventListener('click', () => {
-      lightboxPhotos = carouselPhotos;
-      openLightbox(realIdx);
+  // Click hero to open lightbox
+  const wrap = document.getElementById('heroImageWrap');
+  if (wrap) {
+    wrap.addEventListener('click', () => {
+      lightboxPhotos = heroPhotos;
+      openLightbox(heroIndex);
     });
-
-    track.appendChild(el);
-  });
-
-  startCarousel();
-
-  track.addEventListener('mouseenter', () => { carouselPaused = true; });
-  track.addEventListener('mouseleave', () => { carouselPaused = false; });
-}
-
-function startCarousel() {
-  stopCarousel();
-  carouselPos = 0;
-  const track = document.getElementById('carouselTrack');
-  if (!track) return;
-  track.style.transform = `translateX(0px)`;
-
-  carouselInterval = setInterval(() => {
-    if (carouselPaused) return;
-    const itemW     = 212; // 200px card + 12px gap
-    const halfItems = track.children.length / 2;
-    const maxShift  = itemW * halfItems;
-
-    carouselPos += 0.5;
-    if (carouselPos >= maxShift) carouselPos = 0;
-
-    track.style.transform = `translateX(-${carouselPos}px)`;
-  }, 16);
-}
-
-function stopCarousel() {
-  if (carouselInterval) {
-    clearInterval(carouselInterval);
-    carouselInterval = null;
   }
+}
+
+function loadHeroPhoto(index) {
+  const photo = heroPhotos[index];
+  if (!photo) return;
+
+  const img      = document.getElementById('heroImg');
+  const skeleton = document.getElementById('heroSkeleton');
+  const counter  = document.getElementById('heroCounter');
+  const wrap     = document.getElementById('heroImageWrap');
+
+  // Show skeleton, hide image
+  img.style.opacity = '0';
+  skeleton.style.display = '';
+  wrap.classList.remove('loaded');
+
+  if (counter) counter.textContent = `${index + 1} / ${heroPhotos.length}`;
+
+  const src = fullSrc(photo.src);
+  const tempImg = new Image();
+
+  tempImg.onload = () => {
+    img.src = src;
+    img.alt = photo.title;
+    img.style.opacity = '1';
+    skeleton.style.display = 'none';
+    wrap.classList.add('loaded');
+  };
+
+  tempImg.onerror = () => {
+    img.src = src;
+    img.style.opacity = '1';
+    skeleton.style.display = 'none';
+    wrap.classList.add('loaded');
+  };
+
+  tempImg.src = src;
+}
+
+function heroNav(dir) {
+  heroIndex = (heroIndex + dir + heroPhotos.length) % heroPhotos.length;
+  loadHeroPhoto(heroIndex);
+}
+
+function heroShuffle() {
+  heroPhotos = [...PHOTOS].sort(() => Math.random() - 0.5).slice(0, 20);
+  heroIndex  = 0;
+  loadHeroPhoto(0);
 }
 
 // ── INTERSECTION OBSERVER (lazy load + zoom-fade-in) ──────────
@@ -420,7 +424,7 @@ function thumbSrc(src) {
 }
 
 function fullSrc(src) {
-  if (src.includes('googleusercontent.com')) return src + '=w9999-h9999';
+  if (src.includes('googleusercontent.com')) return src + '=w1600-h1200';
   return src + '?w=1600&q=95';
 }
 
@@ -435,4 +439,3 @@ function escHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 }
-
