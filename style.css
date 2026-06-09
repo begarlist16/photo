@@ -57,10 +57,7 @@ body {
   transition: opacity 0.4s ease;
 }
 
-.page-loader.hidden {
-  opacity: 0;
-  pointer-events: none;
-}
+.page-loader.hidden { opacity: 0; pointer-events: none; }
 
 .loader-ring {
   width: 44px;
@@ -71,15 +68,11 @@ body {
   animation: spin 0.75s linear infinite;
 }
 
-.loader-text {
-  font-size: 13px;
-  color: var(--text3);
-  letter-spacing: 0.5px;
-}
+.loader-text { font-size: 13px; color: var(--text3); letter-spacing: 0.5px; }
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── HEADER (single unified bar) ── */
+/* ── HEADER (2 rows) ── */
 .header {
   position: sticky;
   top: 0;
@@ -90,24 +83,36 @@ body {
   -webkit-backdrop-filter: blur(12px);
 }
 
-.header-inner {
+/* Row 1: home + search + theme */
+.header-row1 {
   max-width: 1280px;
   margin: 0 auto;
   padding: 0 16px;
-  height: 48px;
+  height: 52px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
-/* ── MOBILE CATEGORY ROW ── */
+/* Row 2: category strip */
 .category-row {
-  display: none; /* hidden on desktop; shown on mobile via media query */
   border-top: 1px solid var(--border);
   background: var(--bg);
 }
 
-/* ── HOME ICON BUTTON ── */
+.category-inner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 8px 16px;
+}
+
+.category-inner::-webkit-scrollbar { display: none; }
+
+/* ── HOME BUTTON ── */
 .home-btn {
   display: flex;
   align-items: center;
@@ -116,8 +121,8 @@ body {
   background: var(--bg3);
   border: 1px solid var(--border);
   border-radius: 8px;
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   flex-shrink: 0;
   transition: border-color var(--trans), background var(--trans), transform var(--trans);
 }
@@ -142,13 +147,70 @@ body {
   95%  { transform: rotate(-6deg) scale(1.05); }
 }
 
+/* ── SEARCH BAR ── */
+.search-wrap {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 10px;
+  font-size: 14px;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.search-input {
+  width: 100%;
+  height: 36px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 0 36px 0 34px;
+  font-family: var(--font);
+  font-size: 13px;
+  color: var(--text);
+  outline: none;
+  transition: border-color var(--trans), background var(--trans);
+}
+
+.search-input::placeholder { color: var(--text3); }
+
+.search-input:focus {
+  border-color: var(--accent);
+  background: var(--surface);
+}
+
+.search-clear {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  color: var(--text3);
+  font-size: 12px;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  transition: color var(--trans), background var(--trans);
+}
+
+.search-clear:hover { color: var(--text); background: var(--border); }
+
 /* ── THEME TOGGLE ── */
 .theme-toggle {
   background: var(--bg3);
   border: 1px solid var(--border);
   border-radius: 8px;
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -161,43 +223,13 @@ body {
 
 .theme-toggle:hover { background: var(--surface); border-color: var(--accent); }
 
-/* ── DIVIDER between icon buttons and categories ── */
-.nav-divider {
-  width: 1px;
-  height: 22px;
-  background: var(--border);
-  flex-shrink: 0;
-  margin: 0 2px;
-}
-
-/* ── CATEGORY STRIP (inside header) ── */
-.category-inner {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scroll-snap-type: x proximity;
-  scrollbar-width: none;
-  flex: 1;
-  min-width: 0;
-  padding: 6px 0;
-}
-
-.category-inner::-webkit-scrollbar { display: none; }
-
-/* Mobile-specific category strip inside .category-row */
-.category-row .category-inner {
-  padding: 8px 12px;
-  gap: 6px;
-}
-
+/* ── CATEGORY BUTTONS ── */
 .cat-btn {
   flex-shrink: 0;
   background: none;
-  border: 1px solid transparent;
+  border: 1px solid var(--border);
   border-radius: 20px;
-  padding: 4px 13px;
+  padding: 5px 14px;
   font-family: var(--font);
   font-size: 13px;
   font-weight: 500;
@@ -207,65 +239,9 @@ body {
   white-space: nowrap;
 }
 
-.cat-btn:hover { color: var(--text); border-color: var(--border); }
+.cat-btn:hover { color: var(--text); border-color: var(--text2); }
 
 .cat-btn.active {
-  background: var(--accent);
-  color: #000;
-  border-color: var(--accent);
-  font-weight: 600;
-}
-
-/* ── INLINE GROUP EXPAND ── */
-.group-trigger {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  border-color: var(--border);
-}
-
-.group-trigger.open {
-  background: var(--bg3);
-  border-color: var(--border);
-  color: var(--text);
-}
-
-.group-arrow {
-  font-size: 10px;
-  display: inline-block;
-  transition: transform 0.2s ease;
-}
-
-.group-trigger.open .group-arrow { transform: rotate(90deg); }
-
-.group-chips {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  overflow: hidden;
-  max-width: 0;
-  opacity: 0;
-  transition: max-width 0.32s cubic-bezier(0.22, 1, 0.36, 1),
-              opacity   0.22s ease;
-  padding-left: 0;
-}
-
-.group-chips.open {
-  max-width: 600px;
-  opacity: 1;
-  padding-left: 2px;
-}
-
-.cat-btn.chip {
-  font-size: 12px;
-  padding: 4px 12px;
-  border-color: var(--border);
-  color: var(--text3);
-}
-
-.cat-btn.chip:hover { color: var(--text); border-color: var(--text3); }
-
-.cat-btn.chip.active {
   background: var(--accent);
   color: #000;
   border-color: var(--accent);
@@ -279,6 +255,77 @@ body {
   padding: 32px 24px 80px;
 }
 
+/* ── CAROUSEL SECTION ── */
+.carousel-section {
+  margin-bottom: 32px;
+}
+
+.carousel-wrap {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  height: 220px;
+}
+
+.carousel-track {
+  display: flex;
+  gap: 12px;
+  height: 100%;
+  will-change: transform;
+  padding: 0 4px;
+}
+
+.carousel-item {
+  flex-shrink: 0;
+  width: 200px;
+  height: 200px;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.carousel-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Feather fade edges */
+.carousel-feather {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 100px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.carousel-feather-left {
+  left: 0;
+  background: linear-gradient(to right, var(--bg) 0%, transparent 100%);
+}
+
+.carousel-feather-right {
+  right: 0;
+  background: linear-gradient(to left, var(--bg) 0%, transparent 100%);
+}
+
+.carousel-hint {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--accent);
+  letter-spacing: 0.3px;
+  opacity: 0.9;
+}
+
+[data-theme="light"] .carousel-hint {
+  color: var(--accent);
+}
+
+/* ── SECTION HEADER ── */
 .section-header {
   display: flex;
   align-items: baseline;
@@ -298,85 +345,44 @@ body {
   color: var(--text3);
 }
 
-/* ── SEARCH NOTICE ── */
-.search-notice {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 20px;
-  font-size: 14px;
-  color: var(--text2);
-}
-
-.clear-search {
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 2px 10px;
-  font-size: 12px;
-  color: var(--text2);
-  cursor: pointer;
-  margin-left: 4px;
-  transition: all var(--trans);
-}
-
-.clear-search:hover { border-color: var(--accent); color: var(--accent); }
-
 /* ── PHOTO GRID — Pinterest masonry via CSS columns ── */
 .photo-grid {
-  columns: 4 260px;   /* up to 4 cols, min 260px each */
+  columns: 4 260px;
   column-gap: 14px;
 }
 
 /* ── PHOTO CARD ── */
 .photo-card {
-  break-inside: avoid;   /* never split a card across columns */
+  break-inside: avoid;
   display: block;
   border-radius: var(--radius);
   overflow: hidden;
   cursor: pointer;
   position: relative;
   background: var(--bg3);
-  margin-bottom: 14px;   /* vertical gap between stacked cards */
+  margin-bottom: 14px;
 }
 
-/* Hidden state before image loads */
 .card-hidden {
   opacity: 0;
   transform: scale(0.94);
 }
 
-/* Zoom-fade-in once image is ready */
 .card-visible {
   animation: zoomFadeIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 @keyframes zoomFadeIn {
-  from {
-    opacity: 0;
-    transform: scale(0.92);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
 }
 
-/* Give card a placeholder height while image is being fetched */
-.card-loading {
-  min-height: 200px;
-}
+.card-loading { min-height: 200px; }
 
-/* Skeleton pulse while loading */
 .card-loading .photo-skeleton {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    90deg,
-    var(--bg3) 25%,
-    var(--border) 50%,
-    var(--bg3) 75%
-  );
+  background: linear-gradient(90deg, var(--bg3) 25%, var(--border) 50%, var(--bg3) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.4s infinite;
   z-index: 1;
@@ -388,29 +394,25 @@ body {
   100% { background-position: -200% 0; }
 }
 
-/* Photo wrap — height driven by the image naturally */
 .photo-wrap {
   position: relative;
   width: 100%;
   display: block;
-  line-height: 0; /* removes ghost inline gap below img */
+  line-height: 0;
 }
 
 .photo-wrap img {
   display: block;
   width: 100%;
-  height: auto;       /* natural aspect ratio — no cropping */
+  height: auto;
   object-fit: cover;
   transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
   z-index: 2;
   position: relative;
 }
 
-.photo-card:hover .photo-wrap img {
-  transform: scale(1.06);
-}
+.photo-card:hover .photo-wrap img { transform: scale(1.06); }
 
-/* Hover overlay with zoom icon */
 .photo-hover-overlay {
   position: absolute;
   inset: 0;
@@ -436,14 +438,10 @@ body {
 .photo-card:hover .zoom-icon { transform: scale(1); }
 
 /* ── EMPTY STATE ── */
-.empty-state {
-  text-align: center;
-  padding: 80px 24px;
-}
-
-.empty-icon { font-size: 48px; color: var(--text3); margin-bottom: 16px; }
+.empty-state { text-align: center; padding: 80px 24px; }
+.empty-icon  { font-size: 48px; color: var(--text3); margin-bottom: 16px; }
 .empty-title { font-size: 18px; font-weight: 500; color: var(--text2); margin-bottom: 8px; }
-.empty-sub { font-size: 14px; color: var(--text3); }
+.empty-sub   { font-size: 14px; color: var(--text3); }
 
 /* ── LIGHTBOX ── */
 .lightbox-overlay {
@@ -454,7 +452,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 52px 64px 20px; /* top: room for close btn; sides: room for arrows */
+  padding: 52px 64px 20px;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.28s ease;
@@ -462,12 +460,8 @@ body {
   -webkit-backdrop-filter: blur(8px);
 }
 
-.lightbox-overlay.open {
-  opacity: 1;
-  pointer-events: all;
-}
+.lightbox-overlay.open { opacity: 1; pointer-events: all; }
 
-/* Vertical stack: main image → caption → strip */
 .lb-body {
   display: flex;
   flex-direction: column;
@@ -488,7 +482,6 @@ body {
   width: 100%;
 }
 
-/* Image loader inside lightbox */
 .lb-img-loader {
   position: absolute;
   width: 36px;
@@ -502,7 +495,7 @@ body {
 
 #lbImg {
   max-width: 100%;
-  max-height: calc(100vh - 72px - 32px - 80px); /* viewport - padding - caption - strip */
+  max-height: calc(100vh - 72px - 32px - 80px);
   object-fit: contain;
   border-radius: 8px;
   transition: opacity 0.25s ease;
@@ -510,7 +503,6 @@ body {
   display: block;
 }
 
-/* Caption — inline below image */
 .lb-caption {
   font-size: 13px;
   color: rgba(255,255,255,0.7);
@@ -524,35 +516,25 @@ body {
   line-height: 20px;
 }
 
-/* ── THUMBNAIL STRIP ── */
 .lb-strip-wrap {
   width: 100%;
   flex-shrink: 0;
-  overflow: hidden; /* mask fades handled by CSS */
+  overflow: hidden;
   position: relative;
 }
 
-/* Fade edges */
 .lb-strip-wrap::before,
 .lb-strip-wrap::after {
   content: '';
   position: absolute;
-  top: 0;
-  bottom: 0;
+  top: 0; bottom: 0;
   width: 40px;
   z-index: 2;
   pointer-events: none;
 }
 
-.lb-strip-wrap::before {
-  left: 0;
-  background: linear-gradient(to right, rgba(0,0,0,0.8), transparent);
-}
-
-.lb-strip-wrap::after {
-  right: 0;
-  background: linear-gradient(to left, rgba(0,0,0,0.8), transparent);
-}
+.lb-strip-wrap::before { left: 0; background: linear-gradient(to right, rgba(0,0,0,0.8), transparent); }
+.lb-strip-wrap::after  { right: 0; background: linear-gradient(to left, rgba(0,0,0,0.8), transparent); }
 
 .lb-strip {
   display: flex;
@@ -565,7 +547,6 @@ body {
 
 .lb-strip::-webkit-scrollbar { display: none; }
 
-/* Individual thumbnail */
 .lb-thumb {
   flex-shrink: 0;
   width: 64px;
@@ -578,47 +559,27 @@ body {
   opacity: 0.5;
 }
 
-.lb-thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
+.lb-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.lb-thumb:hover { opacity: 0.85; transform: translateY(-2px); }
+.lb-thumb.active { border-color: var(--accent); opacity: 1; transform: translateY(-3px); }
 
-.lb-thumb:hover {
-  opacity: 0.85;
-  transform: translateY(-2px);
-}
-
-.lb-thumb.active {
-  border-color: var(--accent);
-  opacity: 1;
-  transform: translateY(-3px);
-}
-
-/* Close button */
 .lb-close {
   position: fixed;
-  top: 14px;
-  right: 18px;
+  top: 14px; right: 18px;
   background: rgba(255,255,255,0.1);
   border: 1px solid rgba(255,255,255,0.15);
   border-radius: 50%;
-  width: 36px;
-  height: 36px;
+  width: 36px; height: 36px;
   color: #fff;
   font-size: 15px;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   transition: background var(--trans);
   z-index: 1010;
 }
 
 .lb-close:hover { background: rgba(255,255,255,0.22); }
 
-/* Navigation arrows */
 .lb-nav {
   position: fixed;
   top: 50%;
@@ -626,14 +587,11 @@ body {
   background: rgba(255,255,255,0.1);
   border: 1px solid rgba(255,255,255,0.15);
   border-radius: 50%;
-  width: 44px;
-  height: 44px;
+  width: 44px; height: 44px;
   color: #fff;
   font-size: 26px;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   transition: background var(--trans), opacity var(--trans);
   z-index: 1010;
   line-height: 1;
@@ -642,14 +600,6 @@ body {
 .lb-prev { left: 12px; }
 .lb-next { right: 12px; }
 .lb-nav:hover { background: rgba(255,255,255,0.22); }
-
-@media (max-width: 640px) {
-  .lightbox-overlay { padding: 48px 8px 16px; }
-  .lb-nav { width: 34px; height: 34px; font-size: 20px; }
-  .lb-prev { left: 4px; }
-  .lb-next { right: 4px; }
-  .lb-thumb { width: 52px; height: 52px; }
-}
 
 /* ── FOOTER ── */
 .footer {
@@ -669,41 +619,16 @@ body {
 /* ── RESPONSIVE ── */
 @media (max-width: 640px) {
   .main { padding: 24px 16px 60px; }
-  .header-inner { padding: 0 10px; gap: 4px; }
-  .photo-grid { columns: 2 140px; column-gap: 10px; }
+  .header-row1 { padding: 0 10px; gap: 6px; height: 50px; }
+  .photo-grid  { columns: 2 140px; column-gap: 10px; }
   .photo-card  { margin-bottom: 10px; }
   .lb-nav { width: 36px; height: 36px; font-size: 20px; }
-  .lb-prev { left: 8px; }
-  .lb-next { right: 8px; }
-
-  /* Hide inline categories in header on mobile */
-  .nav-divider,
-  .header-inner .category-inner { display: none; }
-
-  /* Show the dedicated mobile category row */
-  .category-row { display: block; }
-
-  /* Larger tap targets on mobile */
-  .cat-btn {
-    padding: 6px 14px;
-    font-size: 13px;
-  }
-
-  .cat-btn.chip {
-    font-size: 12px;
-    padding: 5px 13px;
-  }
-
-  /* Group chips always visible (flat list) in mobile row */
-  .category-row .group-chips {
-    max-width: none !important;
-    opacity: 1 !important;
-    overflow: visible;
-    padding-left: 0;
-    display: flex;
-    gap: 6px;
-  }
-
-  /* Hide the expand arrows in mobile — everything is flat */
-  .category-row .group-arrow { display: none; }
+  .lb-prev { left: 4px; }
+  .lb-next { right: 4px; }
+  .lb-thumb { width: 52px; height: 52px; }
+  .lightbox-overlay { padding: 48px 8px 16px; }
+  .carousel-item { width: 150px; height: 150px; }
+  .carousel-wrap { height: 170px; }
+  .carousel-hint { font-size: 13px; }
+  .cat-btn { padding: 6px 12px; font-size: 12px; }
 }

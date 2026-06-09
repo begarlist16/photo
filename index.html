@@ -17,61 +17,52 @@
     <span class="loader-text">Memuat Galeri…</span>
   </div>
 
-  <!-- SINGLE NAVBAR: home icon · dark mode · categories -->
+  <!-- NAVBAR ROW 1: home · search · dark mode -->
   <header class="header">
-    <div class="header-inner">
-
-      <!-- Home icon only -->
+    <div class="header-inner header-row1">
       <a href="https://begarlist16.github.io" class="home-btn" title="Kembali ke Homepage">
         <span class="home-emoji">🏠</span>
       </a>
+
+      <!-- Search bar -->
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input
+          type="text"
+          id="searchInput"
+          class="search-input"
+          placeholder="Cari foto…"
+          autocomplete="off"
+          oninput="handleSearch(this.value)"
+        />
+        <button class="search-clear" id="searchClear" onclick="clearSearch()" aria-label="Hapus pencarian">✕</button>
+      </div>
 
       <!-- Dark mode toggle -->
       <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
         <span id="themeIcon">☀</span>
       </button>
-
-      <!-- Divider -->
-      <span class="nav-divider"></span>
-
-      <!-- Inline categories -->
-      <div class="category-inner">
-
-        <button class="cat-btn active" data-cat="all" onclick="filterCategory('all', this)">Semua</button>
-
-        <!-- Group: 10 IPS 3 -->
-        <button class="cat-btn group-trigger" data-group="ips3" onclick="toggleGroup('ips3', this)">
-          10 IPS 3 <span class="group-arrow" id="arrow-ips3">▸</span>
-        </button>
-        <div class="group-chips" id="group-ips3">
-          <button class="cat-btn chip" data-cat="Moments" onclick="filterCategory('Moments', this, 'ips3')">Moments</button>
-          <button class="cat-btn chip" data-cat="Bali"    onclick="filterCategory('Bali',    this, 'ips3')">Bali</button>
-          <button class="cat-btn chip" data-cat="Jogja"   onclick="filterCategory('Jogja',   this, 'ips3')">Jogja</button>
-        </div>
-
-        <!-- Group: Buku Tahunan -->
-        <button class="cat-btn group-trigger" data-group="bukutahunan" onclick="toggleGroup('bukutahunan', this)">
-          Buku Tahunan <span class="group-arrow" id="arrow-bukutahunan">▸</span>
-        </button>
-        <div class="group-chips" id="group-bukutahunan">
-          <button class="cat-btn chip" data-cat="Pose"         onclick="filterCategory('Pose',         this, 'bukutahunan')">Pose</button>
-          <button class="cat-btn chip" data-cat="BTS"          onclick="filterCategory('BTS',          this, 'bukutahunan')">BTS</button>
-          <button class="cat-btn chip" data-cat="Staff & Guru" onclick="filterCategory('Staff & Guru', this, 'bukutahunan')">Staff &amp; Guru</button>
-        </div>
-
-      </div>
     </div>
 
-    <!-- Mobile-only scrollable category strip (flat, no expand/collapse) -->
-    <div class="category-row" id="mobileCategoryRow">
-      <div class="category-inner" id="mobileCategoryInner">
-        <button class="cat-btn active" data-cat="all" onclick="filterCategory('all', this, null, true)">Semua</button>
-        <button class="cat-btn chip" data-cat="Moments" onclick="filterCategory('Moments', this, 'ips3', true)">Moments</button>
-        <button class="cat-btn chip" data-cat="Bali"    onclick="filterCategory('Bali',    this, 'ips3', true)">Bali</button>
-        <button class="cat-btn chip" data-cat="Jogja"   onclick="filterCategory('Jogja',   this, 'ips3', true)">Jogja</button>
-        <button class="cat-btn chip" data-cat="Pose"         onclick="filterCategory('Pose',         this, 'bukutahunan', true)">Pose</button>
-        <button class="cat-btn chip" data-cat="BTS"          onclick="filterCategory('BTS',          this, 'bukutahunan', true)">BTS</button>
-        <button class="cat-btn chip" data-cat="Staff & Guru" onclick="filterCategory('Staff & Guru', this, 'bukutahunan', true)">Staff &amp; Guru</button>
+    <!-- NAVBAR ROW 2: horizontal scrollable category strip (shown on ALL screen sizes) -->
+    <div class="category-row" id="categoryRow">
+      <div class="category-inner" id="categoryInner">
+        <button class="cat-btn" data-cat="10IPS3-Moment"   onclick="filterCategory('10IPS3-Moment',   this)">10IPS3-Moment</button>
+        <button class="cat-btn" data-cat="10IPS3-Pantai"   onclick="filterCategory('10IPS3-Pantai',   this)">10IPS3-Pantai</button>
+        <button class="cat-btn" data-cat="10IPS3-Bali"     onclick="filterCategory('10IPS3-Bali',     this)">10IPS3-Bali</button>
+        <button class="cat-btn" data-cat="IPS-Wasana Warsa" onclick="filterCategory('IPS-Wasana Warsa', this)">IPS-Wasana Warsa</button>
+        <button class="cat-btn" data-cat="Perpisahan"      onclick="filterCategory('Perpisahan',      this)">Perpisahan</button>
+        <button class="cat-btn" data-cat="IPS-17an"        onclick="filterCategory('IPS-17an',        this)">IPS-17an</button>
+        <button class="cat-btn" data-cat="11IPS3-Moment"   onclick="filterCategory('11IPS3-Moment',   this)">11IPS3-Moment</button>
+        <button class="cat-btn" data-cat="11IPS1-Liga"     onclick="filterCategory('11IPS1-Liga',     this)">11IPS1-Liga</button>
+        <button class="cat-btn" data-cat="Banana1"         onclick="filterCategory('Banana1',         this)">Banana1</button>
+        <button class="cat-btn" data-cat="Banana2"         onclick="filterCategory('Banana2',         this)">Banana2</button>
+        <button class="cat-btn" data-cat="12IPS-Moment"    onclick="filterCategory('12IPS-Moment',    this)">12IPS-Moment</button>
+        <button class="cat-btn" data-cat="Organisasi"      onclick="filterCategory('Organisasi',      this)">Organisasi</button>
+        <button class="cat-btn" data-cat="Ultah-BHS36"     onclick="filterCategory('Ultah-BHS36',     this)">Ultah-BHS36</button>
+        <button class="cat-btn" data-cat="12IPS-FinalLiga" onclick="filterCategory('12IPS-FinalLiga', this)">12IPS-FinalLiga</button>
+        <button class="cat-btn" data-cat="12IPS1-Moment"   onclick="filterCategory('12IPS1-Moment',   this)">12IPS1-Moment</button>
+        <button class="cat-btn" data-cat="12IPS-Liga"      onclick="filterCategory('12IPS-Liga',      this)">12IPS-Liga</button>
       </div>
     </div>
   </header>
@@ -79,8 +70,18 @@
   <!-- MAIN CONTENT -->
   <main class="main" id="mainContent">
 
-    <div class="section-header" id="sectionHeader">
-      <h2 class="section-title" id="sectionTitle">Semua Foto</h2>
+    <!-- Carousel: shown when no category is selected -->
+    <div class="carousel-section" id="carouselSection">
+      <div class="carousel-wrap">
+        <div class="carousel-track" id="carouselTrack"></div>
+        <div class="carousel-feather carousel-feather-left"></div>
+        <div class="carousel-feather carousel-feather-right"></div>
+      </div>
+      <p class="carousel-hint">Pilih Kategori Untuk Melihat Daftar Foto</p>
+    </div>
+
+    <div class="section-header" id="sectionHeader" style="display:none">
+      <h2 class="section-title" id="sectionTitle"></h2>
       <span class="section-count" id="sectionCount"></span>
     </div>
 
@@ -108,8 +109,6 @@
         <img id="lbImg" src="" alt="" />
       </div>
       <div class="lb-caption" id="lbCaption"></div>
-
-      <!-- Thumbnail strip -->
       <div class="lb-strip-wrap">
         <div class="lb-strip" id="lbStrip"></div>
       </div>

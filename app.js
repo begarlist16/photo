@@ -2,30 +2,24 @@
 //  Begarlist 16 — Photo Gallery App Logic
 // ============================================================
 
-let currentCategory = 'all';
+let currentCategory = null;  // null = no category selected (show carousel)
 let currentSearch   = '';
 let lightboxIndex   = 0;
 let lightboxPhotos  = [];
+
+let carouselInterval = null;
+let carouselPos      = 0;
+let carouselPaused   = false;
 
 // ── INIT ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   const saved = localStorage.getItem('bg16-theme') || 'dark';
   setTheme(saved);
 
-  renderPhotos(PHOTOS);
-  updateCount(PHOTOS.length);
+  initCarousel();
 
-  // Hide page loader once everything is ready
   window.addEventListener('load', hideLoader);
-  // Fallback: hide after 2s even if some resource is slow
   setTimeout(hideLoader, 2000);
-
-  // Close groups on outside click
-  document.addEventListener('click', (e) => {
-    if (!e.target.closest('.group-trigger') && !e.target.closest('.group-chips')) {
-      closeAllGroups();
-    }
-  });
 });
 
 function hideLoader() {
@@ -49,58 +43,132 @@ function setTheme(theme) {
   document.getElementById('themeIcon').textContent = theme === 'dark' ? '☀' : '◑';
 }
 
-// ── GROUP EXPAND (inline chips) ───────────────────────────────
-function toggleGroup(groupId, triggerBtn) {
-  const chips = document.getElementById('group-' + groupId);
-  const isOpen = chips.classList.contains('open');
+// ── SEARCH ────────────────────────────────────────────────────
+function handleSearch(val) {
+  currentSearch = val.trim().toLowerCase();
+  const clearBtn = document.getElementById('searchClear');
+  clearBtn.style.display = currentSearch ? 'flex' : 'none';
 
-  // Close all groups first
-  closeAllGroups();
-
-  if (!isOpen) {
-    chips.classList.add('open');
-    triggerBtn.classList.add('open');
+  if (currentSearch) {
+    // Search across all categories
+    showGrid();
+    const filtered = PHOTOS.filter(p =>
+      p.title.toLowerCase().includes(currentSearch) ||
+      p.category.toLowerCase().includes(currentSearch) ||
+      p.description.toLowerCase().includes(currentSearch)
+    );
+    document.getElementById('sectionTitle').textContent = `Hasil: "${val.trim()}"`;
+    renderPhotos(filtered);
+    updateCount(filtered.length);
+  } else {
+    // Restore current category or carousel
+    if (currentCategory) {
+      applyCategory(currentCategory);
+    } else {
+      showCarousel();
+    }
   }
 }
 
-function closeAllGroups() {
-  document.querySelectorAll('.group-chips').forEach(c => c.classList.remove('open'));
-  document.querySelectorAll('.group-trigger').forEach(b => b.classList.remove('open'));
+function clearSearch() {
+  const input = document.getElementById('searchInput');
+  input.value = '';
+  handleSearch('');
+  input.focus();
 }
 
 // ── CATEGORY FILTER ───────────────────────────────────────────
-function filterCategory(cat, btn, groupId) {
+function filterCategory(cat, btn) {
   currentCategory = cat;
   currentSearch   = '';
+  document.getElementById('searchInput').value = '';
+  document.getElementById('searchClear').style.display = 'none';
 
-  // Remove active from all cat-btns and chips
+  // Update active state on buttons
   document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  // Mark all buttons with this cat (there may be duplicates)
+  document.querySelectorAll(`.cat-btn[data-cat="${CSS.escape(cat)}"]`).forEach(b => b.classList.add('active'));
 
-  if (groupId) {
-    // Keep group open, mark the trigger as open+active-group, mark the chip active
-    const trigger = document.querySelector(`[data-group="${groupId}"]`);
-    if (trigger) { trigger.classList.add('open', 'active'); }
-    btn.classList.add('active');
-  } else {
-    btn.classList.add('active');
-    closeAllGroups();
-  }
+  applyCategory(cat);
+}
 
-  // Sync active state across both desktop and mobile strips
-  const sel = cat === 'all' ? '.cat-btn[data-cat="all"]' : `.cat-btn[data-cat="${CSS.escape(cat)}"]`;
-  document.querySelectorAll(sel).forEach(b => b.classList.add('active'));
-
-  document.getElementById('sectionTitle').textContent = cat === 'all' ? 'Semua Foto' : cat;
-
-  const filtered = filterPhotos();
+function applyCategory(cat) {
+  showGrid();
+  document.getElementById('sectionTitle').textContent = cat;
+  const filtered = PHOTOS.filter(p => p.category === cat);
   renderPhotos(filtered);
   updateCount(filtered.length);
+}
+
+// ── VIEW SWITCHING ────────────────────────────────────────────
+function showCarousel() {
+  document.getElementById('carouselSection').style.display = '';
+  document.getElementById('sectionHeader').style.display = 'none';
+  document.getElementById('photoGrid').innerHTML = '';
+  document.getElementById('emptyState').style.display = 'none';
+  startCarousel();
+}
+
+function showGrid() {
+  document.getElementById('carouselSection').style.display = 'none';
+  document.getElementById('sectionHeader').style.display = 'flex';
+  stopCarousel();
+}
+
+// ── CAROUSEL ──────────────────────────────────────────────────
+function initCarousel() {
+  // Pick 12 random photos
+  const shuffled = [...PHOTOS].sort(() => Math.random() - 0.5).slice(0, 12);
+  const track = document.getElementById('carouselTrack');
+  track.innerHTML = '';
+
+  // Duplicate for seamless loop
+  const items = [...shuffled, ...shuffled];
+  items.forEach(p => {
+    const el = document.createElement('div');
+    el.className = 'carousel-item';
+    el.innerHTML = `<img src="${escHtml(thumbSrc(p.src))}" alt="${escHtml(p.title)}" loading="lazy" />`;
+    track.appendChild(el);
+  });
+
+  startCarousel();
+
+  // Pause on hover
+  track.addEventListener('mouseenter', () => { carouselPaused = true; });
+  track.addEventListener('mouseleave', () => { carouselPaused = false; });
+}
+
+function startCarousel() {
+  stopCarousel();
+  carouselPos = 0;
+  const track = document.getElementById('carouselTrack');
+  if (!track) return;
+  track.style.transform = `translateX(0px)`;
+
+  carouselInterval = setInterval(() => {
+    if (carouselPaused) return;
+    const itemW = 220; // card width + gap
+    const totalItems = track.children.length / 2; // half is duplicate
+    const maxShift = itemW * totalItems;
+
+    carouselPos += 0.5;
+    if (carouselPos >= maxShift) carouselPos = 0;
+
+    track.style.transform = `translateX(-${carouselPos}px)`;
+  }, 16);
+}
+
+function stopCarousel() {
+  if (carouselInterval) {
+    clearInterval(carouselInterval);
+    carouselInterval = null;
+  }
 }
 
 // ── FILTER LOGIC ──────────────────────────────────────────────
 function filterPhotos() {
   return PHOTOS.filter(p => {
-    const matchCat    = currentCategory === 'all' || p.category === currentCategory;
+    const matchCat    = !currentCategory || p.category === currentCategory;
     const matchSearch = !currentSearch ||
       p.title.toLowerCase().includes(currentSearch) ||
       p.category.toLowerCase().includes(currentSearch) ||
@@ -111,27 +179,22 @@ function filterPhotos() {
 
 // ── INTERSECTION OBSERVER (lazy load + zoom-fade-in) ──────────
 const cardObserver = new IntersectionObserver((entries) => {
-  entries.forEach((entry, idx) => {
+  entries.forEach((entry) => {
     if (entry.isIntersecting) {
       const card = entry.target;
       const img  = card.querySelector('img[data-src]');
 
       if (img) {
-        // Show skeleton loader on the card while image loads
         card.classList.add('card-loading');
-
         const realImg = new Image();
         realImg.onload = () => {
           img.src = img.dataset.src;
           img.removeAttribute('data-src');
           card.classList.remove('card-loading');
-          // Staggered zoom-fade-in: small delay based on position in viewport batch
-          setTimeout(() => {
-            card.classList.add('card-visible');
-          }, card._staggerDelay || 0);
+          setTimeout(() => card.classList.add('card-visible'), card._staggerDelay || 0);
         };
         realImg.onerror = () => {
-          img.src = img.dataset.src; // still try to show
+          img.src = img.dataset.src;
           img.removeAttribute('data-src');
           card.classList.remove('card-loading');
           setTimeout(() => card.classList.add('card-visible'), card._staggerDelay || 0);
@@ -157,7 +220,6 @@ function renderPhotos(photos) {
   }
   empty.style.display = 'none';
 
-  // Store current filtered set for lightbox navigation
   lightboxPhotos = photos;
 
   photos.forEach((p, i) => {
@@ -198,7 +260,6 @@ function openLightbox(index) {
   loadLightboxPhoto(index);
 }
 
-// Build the thumbnail strip once per open (reflects current lightboxPhotos set)
 function buildStrip() {
   const strip = document.getElementById('lbStrip');
   strip.innerHTML = '';
@@ -223,7 +284,6 @@ function buildStrip() {
   });
 }
 
-// Scroll the active thumbnail into view and update active state
 function syncStrip(index) {
   const strip = document.getElementById('lbStrip');
   const thumbs = strip.querySelectorAll('.lb-thumb');
@@ -231,7 +291,6 @@ function syncStrip(index) {
 
   const active = thumbs[index];
   if (active) {
-    // Centre the active thumb in the scroll container
     const stripWrap = strip.parentElement;
     const offset = active.offsetLeft - stripWrap.offsetWidth / 2 + active.offsetWidth / 2;
     strip.scrollTo({ left: offset, behavior: 'smooth' });
@@ -244,7 +303,6 @@ function loadLightboxPhoto(index) {
   const caption = document.getElementById('lbCaption');
   const loader  = document.getElementById('lbImgLoader');
 
-  // Show loader, hide image while full-res loads
   img.style.opacity = '0';
   loader.style.display = 'block';
   caption.textContent  = '';
@@ -266,10 +324,8 @@ function loadLightboxPhoto(index) {
   };
   tempImg.src = full;
 
-  // Sync strip active state
   syncStrip(index);
 
-  // Update nav arrow visibility
   document.getElementById('lbPrev').style.opacity = index > 0 ? '1' : '0.2';
   document.getElementById('lbNext').style.opacity = index < lightboxPhotos.length - 1 ? '1' : '0.2';
 }
@@ -302,19 +358,16 @@ document.addEventListener('keydown', e => {
   if (e.key === 'ArrowRight')  lightboxNav(1);
 });
 
-// ── SRC HELPERS — Google Photos size suffix ───────────────────
-// Appends Google Photos size param only when the URL contains
-// googleusercontent.com; leaves other URLs (Unsplash, etc.) untouched.
+// ── SRC HELPERS ───────────────────────────────────────────────
 function thumbSrc(src) {
   if (src.includes('googleusercontent.com')) return src + '=w500-h500';
-  return src + '?w=500&q=75'; // Unsplash fallback
+  return src + '?w=500&q=75';
 }
 
 function fullSrc(src) {
   if (src.includes('googleusercontent.com')) return src + '=w9999-h9999';
-  return src + '?w=1600&q=95'; // Unsplash fallback
+  return src + '?w=1600&q=95';
 }
-
 
 function updateCount(n) {
   document.getElementById('sectionCount').textContent = `${n} foto`;
@@ -326,16 +379,4 @@ function escHtml(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
-}
-
-function showHome() {
-  currentCategory = 'all';
-  currentSearch   = '';
-  document.getElementById('sectionTitle').textContent = 'Semua Foto';
-  document.querySelectorAll('.cat-btn').forEach(b =>
-    b.classList.toggle('active', b.dataset.cat === 'all')
-  );
-  closeAllGroups();
-  renderPhotos(PHOTOS);
-  updateCount(PHOTOS.length);
 }
