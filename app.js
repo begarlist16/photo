@@ -7,8 +7,10 @@ let currentSearch   = '';
 let lightboxIndex   = 0;
 let lightboxPhotos  = [];
 
-// Carousel grid (homepage) state
-let heroPhotos   = [];   // 6 random photos shown on homepage
+let carouselInterval  = null;
+let carouselPos       = 0;
+let carouselPaused    = false;
+let carouselPhotos    = [];   // the 12 random photos used in carousel
 
 // ── INIT ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -16,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setTheme(saved);
 
   initCategoryNav();
-  initCarouselGrid();
+  initCarousel();
 
   window.addEventListener('load', hideLoader);
   setTimeout(hideLoader, 2000);
@@ -48,9 +50,11 @@ function initCategoryNav() {
   const inner = document.getElementById('categoryInner');
   if (!inner) return;
 
+  // ── Arrow buttons ──
   updateCatNavBtns();
   inner.addEventListener('scroll', updateCatNavBtns);
 
+  // ── Mouse drag ──
   let isDragging = false;
   let dragStartX = 0;
   let dragScrollLeft = 0;
@@ -76,6 +80,7 @@ function initCategoryNav() {
     inner.classList.remove('dragging');
   });
 
+  // ── Wheel → horizontal scroll ──
   inner.addEventListener('wheel', (e) => {
     if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
       e.preventDefault();
@@ -125,7 +130,7 @@ function handleSearch(val) {
     if (currentCategory) {
       applyCategory(currentCategory);
     } else {
-      showHero();
+      showCarousel();
     }
   }
 }
@@ -159,79 +164,75 @@ function applyCategory(cat) {
 }
 
 // ── VIEW SWITCHING ────────────────────────────────────────────
-function showHero() {
+function showCarousel() {
   document.getElementById('carouselSection').style.display = '';
   document.getElementById('sectionHeader').style.display = 'none';
   document.getElementById('photoGrid').innerHTML = '';
   document.getElementById('emptyState').style.display = 'none';
-  document.body.classList.add('homepage-mode');
+  startCarousel();
 }
 
 function showGrid() {
   document.getElementById('carouselSection').style.display = 'none';
   document.getElementById('sectionHeader').style.display = 'flex';
-  document.body.classList.remove('homepage-mode');
+  stopCarousel();
 }
 
-// ── CAROUSEL GRID (6 RANDOM IMAGES HOMEPAGE) ────────────────
-function initCarouselGrid() {
-  heroPhotos = [...PHOTOS].sort(() => Math.random() - 0.5).slice(0, 6);
-  renderCarouselGrid();
-  document.body.classList.add('homepage-mode');
-}
+// ── CAROUSEL ──────────────────────────────────────────────────
+function initCarousel() {
+  carouselPhotos = [...PHOTOS].sort(() => Math.random() - 0.5).slice(0, 12);
 
-function renderCarouselGrid() {
-  const grid = document.getElementById('carouselGrid');
-  if (!grid) return;
-  grid.innerHTML = '';
+  const track = document.getElementById('carouselTrack');
+  track.innerHTML = '';
 
-  heroPhotos.forEach((photo, i) => {
-    const item = document.createElement('div');
-    item.className = 'carousel-grid-item';
+  // Duplicate for seamless loop; store real index on each element
+  const doubled = [...carouselPhotos, ...carouselPhotos];
+  doubled.forEach((p, i) => {
+    const realIdx = i % carouselPhotos.length;
+    const el = document.createElement('div');
+    el.className = 'carousel-item';
+    el.dataset.realIdx = realIdx;
+    el.innerHTML = `<img src="${escHtml(thumbSrc(p.src))}" alt="${escHtml(p.title)}" loading="lazy" />`;
 
-    const skeleton = document.createElement('div');
-    skeleton.className = 'carousel-grid-skeleton';
-
-    const img = document.createElement('img');
-    img.alt = photo.title;
-    img.style.opacity = '0';
-
-    const overlay = document.createElement('div');
-    overlay.className = 'grid-overlay';
-    overlay.innerHTML = '<span class="grid-zoom-icon">⊕</span>';
-
-    item.appendChild(skeleton);
-    item.appendChild(img);
-    item.appendChild(overlay);
-
-    // Click to open lightbox
-    item.addEventListener('click', () => {
-      lightboxPhotos = heroPhotos;
-      openLightbox(i);
+    el.addEventListener('click', () => {
+      lightboxPhotos = carouselPhotos;
+      openLightbox(realIdx);
     });
 
-    // Lazy load image
-    const src = thumbSrc(photo.src);
-    const tempImg = new Image();
-    tempImg.onload = () => {
-      img.src = src;
-      img.style.opacity = '1';
-      item.classList.add('loaded');
-    };
-    tempImg.onerror = () => {
-      img.src = src;
-      img.style.opacity = '1';
-      item.classList.add('loaded');
-    };
-    tempImg.src = src;
-
-    grid.appendChild(item);
+    track.appendChild(el);
   });
+
+  startCarousel();
+
+  track.addEventListener('mouseenter', () => { carouselPaused = true; });
+  track.addEventListener('mouseleave', () => { carouselPaused = false; });
 }
 
-function heroShuffle() {
-  heroPhotos = [...PHOTOS].sort(() => Math.random() - 0.5).slice(0, 6);
-  renderCarouselGrid();
+function startCarousel() {
+  stopCarousel();
+  carouselPos = 0;
+  const track = document.getElementById('carouselTrack');
+  if (!track) return;
+  track.style.transform = `translateX(0px)`;
+
+  carouselInterval = setInterval(() => {
+    if (carouselPaused) return;
+    const itemW     = 212; // 200px card + 12px gap
+    const halfItems = track.children.length / 2;
+    const maxShift  = itemW * halfItems;
+
+    carouselPos += 0.5;
+    if (carouselPos >= maxShift) carouselPos = 0;
+
+    track.style.transform = `translateX(-${carouselPos}px)`;
+  }, 16);
+}
+
+function stopCarousel() {
+  if (carouselInterval) {
+    clearInterval(carouselInterval);
+    carouselInterval = null;
+  }
 }
 
 // ── INTERSECTION OBSERVER (lazy load + zoom-fade-in) ──────────
@@ -419,7 +420,7 @@ function thumbSrc(src) {
 }
 
 function fullSrc(src) {
-  if (src.includes('googleusercontent.com')) return src + '=w1600-h1200';
+  if (src.includes('googleusercontent.com')) return src + '=w9999-h9999';
   return src + '?w=1600&q=95';
 }
 
@@ -434,3 +435,4 @@ function escHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 }
+

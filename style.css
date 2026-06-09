@@ -94,6 +94,8 @@ body {
   gap: 8px;
 }
 
+/* Row 2: category strip — container managed by .category-row flex */
+
 .category-inner {
   display: flex;
   align-items: center;
@@ -109,6 +111,7 @@ body {
 }
 
 .category-inner.dragging { cursor: grabbing; }
+
 .category-inner::-webkit-scrollbar { display: none; }
 
 /* ── HOME BUTTON ── */
@@ -298,186 +301,8 @@ body {
   padding: 32px 24px 80px;
 }
 
-/* ── HOMEPAGE GOOGLE-STYLE ── */
-/* When showing carousel (homepage state), make body fill viewport */
-body.homepage-mode {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  overflow: hidden;
-}
-
-body.homepage-mode .main {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 24px 60px;
-  min-height: 0;
-}
-
-body.homepage-mode .carousel-section {
-  width: 100%;
-  max-width: 700px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0;
-}
-
-/* ── 6-IMAGE CAROUSEL GRID (Homepage) ── */
-.carousel-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(2, 1fr);
-  gap: 10px;
-  width: 100%;
-  max-width: 720px;
-  margin: 0 auto 24px;
-  aspect-ratio: 3/2;
-}
-
-.carousel-grid-item {
-  position: relative;
-  border-radius: 14px;
-  overflow: hidden;
-  cursor: pointer;
-  background: var(--bg3);
-  transition: transform 0.3s cubic-bezier(0.22,1,0.36,1), box-shadow 0.3s ease;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
-}
-
-.carousel-grid-item:hover {
-  transform: scale(1.03);
-  box-shadow: 0 8px 28px rgba(0,0,0,0.45);
-  z-index: 2;
-}
-
-.carousel-grid-item img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  transition: opacity 0.4s ease;
-}
-
-.carousel-grid-item .grid-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(0,0,0,0);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.25s ease;
-}
-
-.carousel-grid-item:hover .grid-overlay {
-  background: rgba(0,0,0,0.3);
-}
-
-.grid-zoom-icon {
-  font-size: 28px;
-  color: #fff;
-  opacity: 0;
-  transform: scale(0.7);
-  transition: opacity 0.25s ease, transform 0.25s ease;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.5);
-}
-
-.carousel-grid-item:hover .grid-zoom-icon {
-  opacity: 1;
-  transform: scale(1);
-}
-
-.carousel-grid-skeleton {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, var(--bg3) 25%, var(--border) 50%, var(--bg3) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.4s infinite;
-  border-radius: 14px;
-  z-index: 1;
-}
-
-.carousel-grid-item.loaded .carousel-grid-skeleton { display: none; }
-
-/* ── HERO CONTROLS ── */
-.hero-controls {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  justify-content: center;
-  margin-bottom: 20px;
-}
-
-.hero-nav-btn {
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text2);
-  font-size: 20px;
-  cursor: pointer;
-  transition: all var(--trans);
-  flex-shrink: 0;
-}
-
-.hero-nav-btn:hover {
-  background: var(--surface);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.hero-refresh-btn {
-  background: var(--accent);
-  border: none;
-  border-radius: 20px;
-  padding: 8px 20px;
-  font-family: var(--font);
-  font-size: 13px;
-  font-weight: 600;
-  color: #000;
-  cursor: pointer;
-  transition: all var(--trans);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.hero-refresh-btn:hover {
-  background: var(--accent2);
-  transform: translateY(-1px);
-}
-
-.hero-counter {
-  font-size: 12px;
-  color: var(--text3);
-  min-width: 60px;
-  text-align: center;
-  letter-spacing: 0.5px;
-}
-
-/* ── CAROUSEL HINT ── */
-.carousel-hint {
-  text-align: center;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text3);
-  letter-spacing: 0.3px;
-}
-
-.carousel-hint span {
-  color: var(--accent);
-  font-weight: 600;
-}
-
-/* Old carousel — hidden when homepage-mode is active, shown in grid/search views */
-.carousel-section-old {
+/* ── CAROUSEL SECTION ── */
+.carousel-section {
   margin-bottom: 32px;
 }
 
@@ -530,9 +355,11 @@ body.homepage-mode .carousel-section {
   display: block;
 }
 
+/* Feather fade edges */
 .carousel-feather {
   position: absolute;
-  top: 0; bottom: 0;
+  top: 0;
+  bottom: 0;
   width: 100px;
   pointer-events: none;
   z-index: 2;
@@ -546,6 +373,20 @@ body.homepage-mode .carousel-section {
 .carousel-feather-right {
   right: 0;
   background: linear-gradient(to left, var(--bg) 0%, transparent 100%);
+}
+
+.carousel-hint {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--accent);
+  letter-spacing: 0.3px;
+  opacity: 0.9;
+}
+
+[data-theme="light"] .carousel-hint {
+  color: var(--accent);
 }
 
 /* ── SECTION HEADER ── */
@@ -825,19 +666,12 @@ body.homepage-mode .carousel-section {
 .lb-nav:hover { background: rgba(255,255,255,0.22); }
 
 /* ── FOOTER ── */
-/* Homepage: fixed to bottom of viewport */
 .footer {
-  background: var(--bg);
   border-top: 1px solid var(--border);
   text-align: center;
-  padding: 14px 24px;
+  padding: 24px;
   font-size: 13px;
   color: var(--text3);
-  z-index: 50;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
 }
 
 /* ── SCROLLBAR ── */
@@ -857,22 +691,8 @@ body.homepage-mode .carousel-section {
   .lb-next { right: 4px; }
   .lb-thumb { width: 52px; height: 52px; }
   .lightbox-overlay { padding: 48px 8px 16px; }
-  .cat-btn { padding: 6px 12px; font-size: 12px; }
-
-  body.homepage-mode .main { padding: 0 12px; }
-  .carousel-grid { gap: 6px; max-width: 100%; }
-  .carousel-grid-item { border-radius: 10px; }
+  .carousel-item { width: 150px; height: 150px; }
+  .carousel-wrap { height: 170px; }
   .carousel-hint { font-size: 13px; }
-  .hero-controls { gap: 10px; }
-  .footer { padding: 10px 16px; font-size: 12px; }
-}
-
-@media (max-width: 380px) {
-  .hero-image-wrap { max-width: 100%; }
-}
-
-/* ── NON-HOMEPAGE: footer follows the photo grid layout ── */
-body:not(.homepage-mode) .footer {
-  position: static;
-  margin-top: 48px;
+  .cat-btn { padding: 6px 12px; font-size: 12px; }
 }
