@@ -1,24 +1,50 @@
 // ============================================================
 //  Begarlist 16 — Photo Gallery App Logic
+//  v2: lazy JSON fetch per category + SW cache + 1-per-cat carousel
 // ============================================================
 
-let currentCategory = null;
-let currentSearch   = '';
-let lightboxIndex   = 0;
-let lightboxPhotos  = [];
+// ── CONSTANTS ────────────────────────────────────────────────
+const CATEGORIES = [
+  '10IPS3-Moment',
+  '10IPS3-Pantai',
+  '10IPS3-Bali',
+  'IPS-Wasana Warsa',
+  'Perpisahan',
+  'IPS-17an',
+  '11IPS3-Moment',
+  '11IPS1-Liga',
+  'Banana1',
+  'Banana2',
+  '12IPS-Moment',
+  'Organisasi',
+  'Ultah-BHS36',
+  '12IPS-FinalLiga',
+  '12IPS1-Moment',
+  '12IPS-Liga',
+];
 
-let carouselInterval  = null;
-let carouselPos       = 0;
-let carouselPaused    = false;
-let carouselPhotos    = [];   // the 12 random photos used in carousel
+// ── STATE ─────────────────────────────────────────────────────
+let currentCategory  = null;
+let currentSearch    = '';
+let lightboxIndex    = 0;
+let lightboxPhotos   = [];
+
+let carouselInterval = null;
+let carouselPos      = 0;
+let carouselPaused   = false;
+let carouselPhotos   = [];   // 1 photo per category (16 total)
+
+// In-memory cache: category → photo array
+const dataCache = {};
 
 // ── INIT ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   const saved = localStorage.getItem('bg16-theme') || 'dark';
   setTheme(saved);
 
+  registerServiceWorker();
   initCategoryNav();
-  initCarousel();
+  initCarousel();   // async – fetches 1 photo per category
 
   window.addEventListener('load', hideLoader);
   setTimeout(hideLoader, 2000);
@@ -29,6 +55,15 @@ function hideLoader() {
   if (loader && !loader.classList.contains('hidden')) {
     loader.classList.add('hidden');
     setTimeout(() => loader.style.display = 'none', 400);
+  }
+}
+
+// ── SERVICE WORKER ────────────────────────────────────────────
+function registerServiceWorker() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      // SW registration failed silently – app still works
+    });
   }
 }
 
@@ -45,23 +80,59 @@ function setTheme(theme) {
   document.getElementById('themeIcon').textContent = theme === 'dark' ? '☀' : '◑';
 }
 
+// ── DATA FETCHING ─────────────────────────────────────────────
+
+/**
+ * Fetch (and cache in memory) the photo array for a given category.
+ * File expected: data-{category}.json  (same folder as index.html)
+ */
+async function fetchCategory(cat) {
+  if (dataCache[cat]) return dataCache[cat];
+
+  const fileName = `data-${encodeURIComponent(cat)}.json`;
+  const res = await fetch(fileName);
+  if (!res.ok) throw new Error(`Failed to load ${fileName}: ${res.status}`);
+
+  const photos = await res.json();
+  dataCache[cat] = photos;
+  return photos;
+}
+
+/**
+ * Fetch one random photo from each category for the carousel.
+ * Returns an array of up to CATEGORIES.length photos.
+ */
+async function fetchCarouselPhotos() {
+  const results = await Promise.allSettled(
+    CATEGORIES.map(cat => fetchCategory(cat))
+  );
+
+  const picks = [];
+  results.forEach((r, i) => {
+    if (r.status === 'fulfilled' && r.value.length > 0) {
+      const arr   = r.value;
+      const photo = arr[Math.floor(Math.random() * arr.length)];
+      picks.push({ ...photo, _cat: CATEGORIES[i] });
+    }
+  });
+  return picks;
+}
+
 // ── CATEGORY NAV (arrows + drag + wheel) ─────────────────────
 function initCategoryNav() {
   const inner = document.getElementById('categoryInner');
   if (!inner) return;
 
-  // ── Arrow buttons ──
   updateCatNavBtns();
   inner.addEventListener('scroll', updateCatNavBtns);
 
-  // ── Mouse drag ──
-  let isDragging = false;
-  let dragStartX = 0;
+  let isDragging   = false;
+  let dragStartX   = 0;
   let dragScrollLeft = 0;
 
   inner.addEventListener('mousedown', (e) => {
-    isDragging  = true;
-    dragStartX  = e.pageX - inner.offsetLeft;
+    isDragging     = true;
+    dragStartX     = e.pageX - inner.offsetLeft;
     dragScrollLeft = inner.scrollLeft;
     inner.classList.add('dragging');
   });
@@ -80,7 +151,6 @@ function initCategoryNav() {
     inner.classList.remove('dragging');
   });
 
-  // ── Wheel → horizontal scroll ──
   inner.addEventListener('wheel', (e) => {
     if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
       e.preventDefault();
@@ -111,18 +181,28 @@ function updateCatNavBtns() {
 }
 
 // ── SEARCH ────────────────────────────────────────────────────
-function handleSearch(val) {
+async function handleSearch(val) {
   currentSearch = val.trim().toLowerCase();
   const clearBtn = document.getElementById('searchClear');
   clearBtn.style.display = currentSearch ? 'flex' : 'none';
 
   if (currentSearch) {
     showGrid();
-    const filtered = PHOTOS.filter(p =>
+    showGridLoader();
+
+    // Search across all categories – fetch any not yet cached
+    const allPhotos = (await Promise.allSettled(
+      CATEGORIES.map(cat => fetchCategory(cat))
+    ))
+      .filter(r => r.status === 'fulfilled')
+      .flatMap(r => r.value);
+
+    const filtered = allPhotos.filter(p =>
       p.title.toLowerCase().includes(currentSearch) ||
       p.category.toLowerCase().includes(currentSearch) ||
-      p.description.toLowerCase().includes(currentSearch)
+      (p.description || '').toLowerCase().includes(currentSearch)
     );
+
     document.getElementById('sectionTitle').textContent = `Hasil: "${val.trim()}"`;
     renderPhotos(filtered);
     updateCount(filtered.length);
@@ -155,18 +235,25 @@ function filterCategory(cat, btn) {
   applyCategory(cat);
 }
 
-function applyCategory(cat) {
+async function applyCategory(cat) {
   showGrid();
+  showGridLoader();
   document.getElementById('sectionTitle').textContent = cat;
-  const filtered = PHOTOS.filter(p => p.category === cat);
-  renderPhotos(filtered);
-  updateCount(filtered.length);
+
+  try {
+    const photos = await fetchCategory(cat);
+    renderPhotos(photos);
+    updateCount(photos.length);
+  } catch (err) {
+    hideGridLoader();
+    showFetchError(cat);
+  }
 }
 
 // ── VIEW SWITCHING ────────────────────────────────────────────
 function showCarousel() {
   document.getElementById('carouselSection').style.display = '';
-  document.getElementById('sectionHeader').style.display = 'none';
+  document.getElementById('sectionHeader').style.display  = 'none';
   document.getElementById('photoGrid').innerHTML = '';
   document.getElementById('emptyState').style.display = 'none';
   startCarousel();
@@ -174,18 +261,40 @@ function showCarousel() {
 
 function showGrid() {
   document.getElementById('carouselSection').style.display = 'none';
-  document.getElementById('sectionHeader').style.display = 'flex';
+  document.getElementById('sectionHeader').style.display   = 'flex';
   stopCarousel();
 }
 
+// ── GRID LOADER / ERROR HELPERS ───────────────────────────────
+function showGridLoader() {
+  const grid = document.getElementById('photoGrid');
+  grid.innerHTML = `
+    <div class="grid-loading">
+      <div class="loader-ring"></div>
+      <span class="loader-text">Memuat foto…</span>
+    </div>`;
+  document.getElementById('emptyState').style.display = 'none';
+}
+
+function hideGridLoader() {
+  document.getElementById('photoGrid').innerHTML = '';
+}
+
+function showFetchError(cat) {
+  const empty = document.getElementById('emptyState');
+  empty.style.display = 'block';
+  empty.querySelector('.empty-title').textContent = `Gagal memuat kategori "${cat}"`;
+  empty.querySelector('.empty-sub').textContent   = 'Periksa koneksi internet dan coba lagi.';
+}
+
 // ── CAROUSEL ──────────────────────────────────────────────────
-function initCarousel() {
-  carouselPhotos = [...PHOTOS].sort(() => Math.random() - 0.5).slice(0, 12);
+async function initCarousel() {
+  carouselPhotos = await fetchCarouselPhotos();   // 1 per category
 
   const track = document.getElementById('carouselTrack');
   track.innerHTML = '';
 
-  // Duplicate for seamless loop; store real index on each element
+  // Duplicate for seamless loop
   const doubled = [...carouselPhotos, ...carouselPhotos];
   doubled.forEach((p, i) => {
     const realIdx = i % carouselPhotos.length;
@@ -195,8 +304,8 @@ function initCarousel() {
     el.innerHTML = `<img src="${escHtml(thumbSrc(p.src))}" alt="${escHtml(p.title)}" loading="lazy" />`;
 
     el.addEventListener('click', () => {
-      lightboxPhotos = carouselPhotos;
-      openLightbox(realIdx);
+      // When a carousel item is clicked, open that category instead
+      filterCategory(p._cat || p.category, null);
     });
 
     track.appendChild(el);
@@ -206,13 +315,15 @@ function initCarousel() {
 
   track.addEventListener('mouseenter', () => { carouselPaused = true; });
   track.addEventListener('mouseleave', () => { carouselPaused = false; });
+
+  hideLoader();
 }
 
 function startCarousel() {
   stopCarousel();
   carouselPos = 0;
   const track = document.getElementById('carouselTrack');
-  if (!track) return;
+  if (!track || track.children.length === 0) return;
   track.style.transform = `translateX(0px)`;
 
   carouselInterval = setInterval(() => {
@@ -274,6 +385,8 @@ function renderPhotos(photos) {
 
   if (photos.length === 0) {
     empty.style.display = 'block';
+    empty.querySelector('.empty-title').textContent = 'Tidak ada foto ditemukan';
+    empty.querySelector('.empty-sub').textContent   = 'Coba kata kunci lain atau pilih kategori berbeda.';
     return;
   }
   empty.style.display = 'none';
@@ -343,7 +456,7 @@ function buildStrip() {
 }
 
 function syncStrip(index) {
-  const strip = document.getElementById('lbStrip');
+  const strip  = document.getElementById('lbStrip');
   const thumbs = strip.querySelectorAll('.lb-thumb');
   thumbs.forEach((t, i) => t.classList.toggle('active', i === index));
 
@@ -429,10 +542,9 @@ function updateCount(n) {
 }
 
 function escHtml(str) {
-  return str
+  return String(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 }
-
