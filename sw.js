@@ -1,117 +1,116 @@
 // ============================================================
 //  Begarlist 16 — Service Worker
 //  Strategy:
-//    • App shell (HTML/CSS/JS)  → Network-first, fallback to cache
-//    • Category JSON data files → Cache-first, background revalidate
-//    • External images (CDN)    → Pass through (no caching — CORS)
+//    - App shell (HTML/CSS/JS)  → Cache-first, update in background
+//    - Category JSON data files → Cache-first, update in background
+//    - Images (photos)          → Cache-first (large, long-lived)
 // ============================================================
 
-const SW_VERSION  = 'bg16-v1';
-const SHELL_CACHE = `${SW_VERSION}-shell`;
-const DATA_CACHE  = `${SW_VERSION}-data`;
+const CACHE_VERSION   = 'bg16-v1';
+const DATA_CACHE      = 'bg16-data-v1';
+const IMAGE_CACHE     = 'bg16-images-v1';
 
-// Files to pre-cache on install (app shell)
-const SHELL_FILES = [
-  '/',
-  '/index.html',
-  '/style.css',
-  '/app.js',
+// Core app shell files to pre-cache on install
+const SHELL_ASSETS = [
+  './',
+  './index.html',
+  './app.js',
+  './style.css',
 ];
 
-// ── INSTALL ───────────────────────────────────────────────────
+// ── INSTALL: pre-cache app shell ──────────────────────────────
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(SHELL_CACHE).then((cache) => cache.addAll(SHELL_FILES))
+    caches.open(CACHE_VERSION).then((cache) => {
+      return cache.addAll(SHELL_ASSETS);
+    }).then(() => self.skipWaiting())
   );
-  self.skipWaiting();
 });
 
-// ── ACTIVATE ──────────────────────────────────────────────────
+// ── ACTIVATE: clean up old caches ────────────────────────────
 self.addEventListener('activate', (event) => {
+  const currentCaches = [CACHE_VERSION, DATA_CACHE, IMAGE_CACHE];
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter((k) => k.startsWith('bg16-') && k !== SHELL_CACHE && k !== DATA_CACHE)
-          .map((k) => caches.delete(k))
-      )
-    )
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames
+          .filter(name => !currentCaches.includes(name))
+          .map(name => caches.delete(name))
+      );
+    }).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
-// ── FETCH ─────────────────────────────────────────────────────
+// ── FETCH: route requests to the right strategy ───────────────
 self.addEventListener('fetch', (event) => {
-  const { request } = event;
-  const url = new URL(request.url);
+  const url = new URL(event.request.url);
 
-  // Only handle GET requests
-  if (request.method !== 'GET') return;
+  // Skip non-GET and cross-origin requests (except images from known CDNs)
+  if (event.request.method !== 'GET') return;
 
-  // ── Let external requests (images, fonts, etc.) pass through untouched ──
-  // Attempting to cache cross-origin responses without CORS headers fails.
-  if (url.origin !== self.location.origin) return;
-
-  // ── Category JSON data files → Cache-first + background revalidate ──
-  if (url.pathname.match(/^\/data-.+\.json$/)) {
-    event.respondWith(cacheFirstWithUpdate(request, DATA_CACHE));
+  // ── Images: photos from Google CDN or same-origin images ──
+  if (
+    url.hostname.includes('googleusercontent.com') ||
+    url.hostname.includes('lh3.google') ||
+    /\.(jpe?g|png|webp|gif|avif)(\?|$)/i.test(url.pathname)
+  ) {
+    event.respondWith(cacheFirstImage(event.request));
     return;
   }
 
-  // ── App shell & same-origin assets → Network-first ──
-  event.respondWith(networkFirstWithFallback(request, SHELL_CACHE));
-});
-
-// ── STRATEGIES ────────────────────────────────────────────────
-
-/**
- * Cache-first: serve from cache immediately.
- * Fetch from network and update cache silently in background (stale-while-revalidate).
- */
-async function cacheFirstWithUpdate(request, cacheName) {
-  const cache  = await caches.open(cacheName);
-  const cached = await cache.match(request);
-
-  const fetchAndStore = fetch(request)
-    .then((response) => {
-      if (response && response.ok) cache.put(request, response.clone());
-      return response;
-    })
-    .catch(() => null);
-
-  if (cached) {
-    fetchAndStore; // fire-and-forget background update
-    return cached;
+  // ── Category JSON data files ──
+  if (url.pathname.match(/\/data-[\w-]+\.json$/)) {
+    event.respondWith(staleWhileRevalidate(event.request, DATA_CACHE));
+    return;
   }
 
-  const fresh = await fetchAndStore;
-  if (fresh) return fresh;
+  // ── App shell (HTML, CSS, JS) ──
+  if (
+    url.pathname.endsWith('.html') ||
+    url.pathname.endsWith('.css')  ||
+    url.pathname.endsWith('.js')   ||
+    url.pathname === '/' ||
+    url.pathname.endsWith('/')
+  ) {
+    event.respondWith(staleWhileRevalidate(event.request, CACHE_VERSION));
+    return;
+  }
+});
 
-  return new Response('{"error":"offline"}', {
-    status: 503,
-    headers: { 'Content-Type': 'application/json' },
-  });
+// ── STRATEGY: Stale-While-Revalidate ─────────────────────────
+// Serve from cache immediately; fetch fresh copy in background.
+async function staleWhileRevalidate(request, cacheName) {
+  const cache    = await caches.open(cacheName);
+  const cached   = await cache.match(request);
+
+  // Kick off a background update regardless
+  const fetchPromise = fetch(request).then((networkResponse) => {
+    if (networkResponse && networkResponse.ok) {
+      cache.put(request, networkResponse.clone());
+    }
+    return networkResponse;
+  }).catch(() => null);
+
+  return cached || fetchPromise;
 }
 
-/**
- * Network-first: try network, fall back to cache.
- */
-async function networkFirstWithFallback(request, cacheName) {
-  const cache = await caches.open(cacheName);
+// ── STRATEGY: Cache-First for images (large, rarely change) ──
+async function cacheFirstImage(request) {
+  const cache  = await caches.open(IMAGE_CACHE);
+  const cached = await cache.match(request);
+  if (cached) return cached;
 
   try {
-    const response = await fetch(request);
-    if (response && response.ok) cache.put(request, response.clone());
-    return response;
-  } catch {
-    const cached = await cache.match(request);
-    if (cached) return cached;
-
-    if (request.destination === 'document') {
-      const fallback = await cache.match('/index.html');
-      if (fallback) return fallback;
+    const networkResponse = await fetch(request);
+    if (networkResponse && networkResponse.ok) {
+      cache.put(request, networkResponse.clone());
     }
-
-    return new Response('Offline', { status: 503 });
+    return networkResponse;
+  } catch {
+    // Return a minimal transparent placeholder if offline and no cache
+    return new Response(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"></svg>',
+      { headers: { 'Content-Type': 'image/svg+xml' } }
+    );
   }
 }

@@ -1,89 +1,10 @@
 // ============================================================
 //  Begarlist 16 — Photo Gallery App Logic
-//  v2: lazy JSON fetch per category + SW cache + 1-per-cat carousel
+//  v2: per-category JSON fetching + SW caching + smart carousel
 // ============================================================
 
-// ── CONSTANTS ────────────────────────────────────────────────
-const CATEGORIES = [
-  '10IPS3-Moment',
-  '10IPS3-Pantai',
-  '10IPS3-Bali',
-  'IPS-Wasana Warsa',
-  'Perpisahan',
-  'IPS-17an',
-  '11IPS3-Moment',
-  '11IPS1-Liga',
-  'Banana1',
-  'Banana2',
-  '12IPS-Moment',
-  'Organisasi',
-  'Ultah-BHS36',
-  '12IPS-FinalLiga',
-  '12IPS1-Moment',
-  '12IPS-Liga',
-];
-
-// ── STATE ─────────────────────────────────────────────────────
-let currentCategory  = null;
-let currentSearch    = '';
-let lightboxIndex    = 0;
-let lightboxPhotos   = [];
-
-let carouselInterval = null;
-let carouselPos      = 0;
-let carouselPaused   = false;
-let carouselPhotos   = [];   // 1 photo per category (16 total)
-
-// In-memory cache: category → photo array
-const dataCache = {};
-
-// ── INIT ──────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  const saved = localStorage.getItem('bg16-theme') || 'dark';
-  setTheme(saved);
-
-  registerServiceWorker();
-  initCategoryNav();
-  initCarousel();   // async – fetches 1 photo per category
-
-  window.addEventListener('load', hideLoader);
-  setTimeout(hideLoader, 2000);
-});
-
-function hideLoader() {
-  const loader = document.getElementById('pageLoader');
-  if (loader && !loader.classList.contains('hidden')) {
-    loader.classList.add('hidden');
-    setTimeout(() => loader.style.display = 'none', 400);
-  }
-}
-
-// ── SERVICE WORKER ────────────────────────────────────────────
-function registerServiceWorker() {
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').catch(() => {
-      // SW registration failed silently – app still works
-    });
-  }
-}
-
-// ── THEME ─────────────────────────────────────────────────────
-function toggleTheme() {
-  const html  = document.documentElement;
-  const theme = html.dataset.theme === 'dark' ? 'light' : 'dark';
-  setTheme(theme);
-  localStorage.setItem('bg16-theme', theme);
-}
-
-function setTheme(theme) {
-  document.documentElement.dataset.theme = theme;
-  document.getElementById('themeIcon').textContent = theme === 'dark' ? '☀' : '◑';
-}
-
-// ── DATA FETCHING ─────────────────────────────────────────────
-
-// Map display category name → actual JSON filename
-const CATEGORY_FILE_MAP = {
+// Category → JSON filename map (matches data-cat values in index.html)
+const CATEGORY_FILES = {
   '10IPS3-Moment':    'data-10ips3-moment.json',
   '10IPS3-Pantai':    'data-10ips3-pantai.json',
   '10IPS3-Bali':      'data-10ips3-bali.json',
@@ -102,40 +23,92 @@ const CATEGORY_FILE_MAP = {
   '12IPS-Liga':       'data-12ips-liga.json',
 };
 
-/**
- * Fetch (and cache in memory) the photo array for a given category.
- */
-async function fetchCategory(cat) {
-  if (dataCache[cat]) return dataCache[cat];
+const CATEGORIES = Object.keys(CATEGORY_FILES);
 
-  const fileName = CATEGORY_FILE_MAP[cat];
-  if (!fileName) throw new Error(`Unknown category: ${cat}`);
-  const res = await fetch(fileName);
-  if (!res.ok) throw new Error(`Failed to load ${fileName}: ${res.status}`);
+// In-memory cache: category → photo array
+const photoCache = {};
 
-  const photos = await res.json();
-  dataCache[cat] = photos;
-  return photos;
+let currentCategory = null;
+let currentSearch   = '';
+let lightboxIndex   = 0;
+let lightboxPhotos  = [];
+
+let carouselInterval = null;
+let carouselPos      = 0;
+let carouselPaused   = false;
+let carouselPhotos   = [];   // 1 photo per category for homepage
+
+// ── INIT ──────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('bg16-theme') || 'dark';
+  setTheme(saved);
+
+  // Register service worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(err => {
+      console.warn('SW registration failed:', err);
+    });
+  }
+
+  initCategoryNav();
+  initCarousel();
+
+  window.addEventListener('load', hideLoader);
+  setTimeout(hideLoader, 2000);
+});
+
+function hideLoader() {
+  const loader = document.getElementById('pageLoader');
+  if (loader && !loader.classList.contains('hidden')) {
+    loader.classList.add('hidden');
+    setTimeout(() => loader.style.display = 'none', 400);
+  }
 }
 
-/**
- * Fetch one random photo from each category for the carousel.
- * Returns an array of up to CATEGORIES.length photos.
- */
-async function fetchCarouselPhotos() {
-  const results = await Promise.allSettled(
-    CATEGORIES.map(cat => fetchCategory(cat))
-  );
+// ── THEME ─────────────────────────────────────────────────────
+function toggleTheme() {
+  const html  = document.documentElement;
+  const theme = html.dataset.theme === 'dark' ? 'light' : 'dark';
+  setTheme(theme);
+  localStorage.setItem('bg16-theme', theme);
+}
 
-  const picks = [];
-  results.forEach((r, i) => {
-    if (r.status === 'fulfilled' && r.value.length > 0) {
-      const arr   = r.value;
-      const photo = arr[Math.floor(Math.random() * arr.length)];
-      picks.push({ ...photo, _cat: CATEGORIES[i] });
-    }
+function setTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  document.getElementById('themeIcon').textContent = theme === 'dark' ? '☀' : '◑';
+}
+
+// ── DATA FETCHING ─────────────────────────────────────────────
+async function fetchCategory(cat) {
+  // Return from memory cache if already loaded
+  if (photoCache[cat]) return photoCache[cat];
+
+  const file = CATEGORY_FILES[cat];
+  if (!file) return [];
+
+  try {
+    const res = await fetch(file);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    // Support both array format and { photos: [] } format
+    const photos = Array.isArray(data) ? data : (data.photos || []);
+    photoCache[cat] = photos;
+    return photos;
+  } catch (err) {
+    console.error(`Failed to load ${file}:`, err);
+    return [];
+  }
+}
+
+// Fetch one random photo per category for the homepage carousel
+async function fetchCarouselPhotos() {
+  const promises = CATEGORIES.map(async (cat) => {
+    const photos = await fetchCategory(cat);
+    if (photos.length === 0) return null;
+    return photos[Math.floor(Math.random() * photos.length)];
   });
-  return picks;
+  const results = await Promise.all(promises);
+  return results.filter(Boolean);
 }
 
 // ── CATEGORY NAV (arrows + drag + wheel) ─────────────────────
@@ -146,8 +119,8 @@ function initCategoryNav() {
   updateCatNavBtns();
   inner.addEventListener('scroll', updateCatNavBtns);
 
-  let isDragging   = false;
-  let dragStartX   = 0;
+  let isDragging    = false;
+  let dragStartX    = 0;
   let dragScrollLeft = 0;
 
   inner.addEventListener('mousedown', (e) => {
@@ -210,19 +183,13 @@ async function handleSearch(val) {
     showGrid();
     showGridLoader();
 
-    // Search across all categories – fetch any not yet cached
-    const allPhotos = (await Promise.allSettled(
-      CATEGORIES.map(cat => fetchCategory(cat))
-    ))
-      .filter(r => r.status === 'fulfilled')
-      .flatMap(r => r.value);
-
-    const filtered = allPhotos.filter(p =>
+    // Search across all categories (fetch any not yet loaded)
+    const allPhotos = await fetchAllCategories();
+    const filtered  = allPhotos.filter(p =>
       p.title.toLowerCase().includes(currentSearch) ||
       p.category.toLowerCase().includes(currentSearch) ||
       (p.description || '').toLowerCase().includes(currentSearch)
     );
-
     document.getElementById('sectionTitle').textContent = `Hasil: "${val.trim()}"`;
     renderPhotos(filtered);
     updateCount(filtered.length);
@@ -233,6 +200,11 @@ async function handleSearch(val) {
       showCarousel();
     }
   }
+}
+
+async function fetchAllCategories() {
+  const all = await Promise.all(CATEGORIES.map(fetchCategory));
+  return all.flat();
 }
 
 function clearSearch() {
@@ -260,20 +232,27 @@ async function applyCategory(cat) {
   showGridLoader();
   document.getElementById('sectionTitle').textContent = cat;
 
-  try {
-    const photos = await fetchCategory(cat);
-    renderPhotos(photos);
-    updateCount(photos.length);
-  } catch (err) {
-    hideGridLoader();
-    showFetchError(cat);
-  }
+  const photos = await fetchCategory(cat);
+  renderPhotos(photos);
+  updateCount(photos.length);
+}
+
+// Inline loading indicator while fetching
+function showGridLoader() {
+  const grid = document.getElementById('photoGrid');
+  grid.innerHTML = '';
+  const loader = document.createElement('div');
+  loader.id = 'gridLoader';
+  loader.className = 'grid-loader';
+  loader.innerHTML = '<div class="loader-ring"></div>';
+  grid.appendChild(loader);
+  document.getElementById('emptyState').style.display = 'none';
 }
 
 // ── VIEW SWITCHING ────────────────────────────────────────────
 function showCarousel() {
   document.getElementById('carouselSection').style.display = '';
-  document.getElementById('sectionHeader').style.display  = 'none';
+  document.getElementById('sectionHeader').style.display   = 'none';
   document.getElementById('photoGrid').innerHTML = '';
   document.getElementById('emptyState').style.display = 'none';
   startCarousel();
@@ -285,31 +264,10 @@ function showGrid() {
   stopCarousel();
 }
 
-// ── GRID LOADER / ERROR HELPERS ───────────────────────────────
-function showGridLoader() {
-  const grid = document.getElementById('photoGrid');
-  grid.innerHTML = `
-    <div class="grid-loading">
-      <div class="loader-ring"></div>
-      <span class="loader-text">Memuat foto…</span>
-    </div>`;
-  document.getElementById('emptyState').style.display = 'none';
-}
-
-function hideGridLoader() {
-  document.getElementById('photoGrid').innerHTML = '';
-}
-
-function showFetchError(cat) {
-  const empty = document.getElementById('emptyState');
-  empty.style.display = 'block';
-  empty.querySelector('.empty-title').textContent = `Gagal memuat kategori "${cat}"`;
-  empty.querySelector('.empty-sub').textContent   = 'Periksa koneksi internet dan coba lagi.';
-}
-
 // ── CAROUSEL ──────────────────────────────────────────────────
 async function initCarousel() {
-  carouselPhotos = await fetchCarouselPhotos();   // 1 per category
+  // Fetch 1 photo per category
+  carouselPhotos = await fetchCarouselPhotos();
 
   const track = document.getElementById('carouselTrack');
   track.innerHTML = '';
@@ -318,14 +276,14 @@ async function initCarousel() {
   const doubled = [...carouselPhotos, ...carouselPhotos];
   doubled.forEach((p, i) => {
     const realIdx = i % carouselPhotos.length;
-    const el = document.createElement('div');
-    el.className = 'carousel-item';
+    const el      = document.createElement('div');
+    el.className  = 'carousel-item';
     el.dataset.realIdx = realIdx;
-    el.innerHTML = `<img src="${escHtml(thumbSrc(p.src))}" alt="${escHtml(p.title)}" loading="lazy" />`;
+    el.innerHTML  = `<img src="${escHtml(thumbSrc(p.src))}" alt="${escHtml(p.title)}" loading="lazy" />`;
 
     el.addEventListener('click', () => {
-      // When a carousel item is clicked, open that category instead
-      filterCategory(p._cat || p.category, null);
+      lightboxPhotos = carouselPhotos;
+      openLightbox(realIdx);
     });
 
     track.appendChild(el);
@@ -333,18 +291,16 @@ async function initCarousel() {
 
   startCarousel();
 
-  track.addEventListener('mouseenter', () => { carouselPaused = true; });
+  track.addEventListener('mouseenter', () => { carouselPaused = true;  });
   track.addEventListener('mouseleave', () => { carouselPaused = false; });
-
-  hideLoader();
 }
 
 function startCarousel() {
   stopCarousel();
   carouselPos = 0;
   const track = document.getElementById('carouselTrack');
-  if (!track || track.children.length === 0) return;
-  track.style.transform = `translateX(0px)`;
+  if (!track || !track.children.length) return;
+  track.style.transform = 'translateX(0px)';
 
   carouselInterval = setInterval(() => {
     if (carouselPaused) return;
@@ -405,12 +361,9 @@ function renderPhotos(photos) {
 
   if (photos.length === 0) {
     empty.style.display = 'block';
-    empty.querySelector('.empty-title').textContent = 'Tidak ada foto ditemukan';
-    empty.querySelector('.empty-sub').textContent   = 'Coba kata kunci lain atau pilih kategori berbeda.';
     return;
   }
   empty.style.display = 'none';
-
   lightboxPhotos = photos;
 
   photos.forEach((p, i) => {
@@ -419,7 +372,6 @@ function renderPhotos(photos) {
     card._staggerDelay = Math.min(i, 11) * 60;
 
     const thumb = thumbSrc(p.src);
-
     card.innerHTML = `
       <div class="photo-wrap">
         <div class="photo-skeleton"></div>
@@ -461,8 +413,8 @@ function buildStrip() {
     thumb.dataset.index = i;
 
     const img = document.createElement('img');
-    img.src = thumbSrc(p.src);
-    img.alt = p.title;
+    img.src   = thumbSrc(p.src);
+    img.alt   = p.title;
     img.loading = 'lazy';
 
     thumb.appendChild(img);
@@ -498,8 +450,7 @@ function loadLightboxPhoto(index) {
   loader.style.display = 'block';
   caption.textContent  = '';
 
-  const full = fullSrc(photo.src);
-
+  const full    = fullSrc(photo.src);
   const tempImg = new Image();
   tempImg.onload = () => {
     img.src = full;
