@@ -82,14 +82,34 @@ function setTheme(theme) {
 
 // ── DATA FETCHING ─────────────────────────────────────────────
 
+// Map display category name → actual JSON filename
+const CATEGORY_FILE_MAP = {
+  '10IPS3-Moment':    'data-10ips3-moment.json',
+  '10IPS3-Pantai':    'data-10ips3-pantai.json',
+  '10IPS3-Bali':      'data-10ips3-bali.json',
+  'IPS-Wasana Warsa': 'data-ips-wasana-warsa.json',
+  'Perpisahan':       'data-perpisahan.json',
+  'IPS-17an':         'data-ips-17an.json',
+  '11IPS3-Moment':    'data-11ips3-moment.json',
+  '11IPS1-Liga':      'data-11ips1-liga.json',
+  'Banana1':          'data-banana1.json',
+  'Banana2':          'data-banana2.json',
+  '12IPS-Moment':     'data-12ips-moment.json',
+  'Organisasi':       'data-organisasi.json',
+  'Ultah-BHS36':      'data-ultah-bhs36.json',
+  '12IPS-FinalLiga':  'data-12ips-finalliga.json',
+  '12IPS1-Moment':    'data-12ips1-moment.json',
+  '12IPS-Liga':       'data-12ips-liga.json',
+};
+
 /**
  * Fetch (and cache in memory) the photo array for a given category.
- * File expected: data-{category}.json  (same folder as index.html)
  */
 async function fetchCategory(cat) {
   if (dataCache[cat]) return dataCache[cat];
 
-  const fileName = `data-${encodeURIComponent(cat)}.json`;
+  const fileName = CATEGORY_FILE_MAP[cat];
+  if (!fileName) throw new Error(`Unknown category: ${cat}`);
   const res = await fetch(fileName);
   if (!res.ok) throw new Error(`Failed to load ${fileName}: ${res.status}`);
 
